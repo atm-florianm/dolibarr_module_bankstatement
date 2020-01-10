@@ -13,36 +13,44 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#
-# Générique
-#
 
 # Module label
 ModuleBankStatementImportName = Import de relevés de banque
+
 # Module description
 ModuleBankStatementImportDesc = Permet d’importer des relevés de comptes bancaires en CSV pour rapprochement automatique
-
-#
-# Page d'administration
-#
-BankStatementImportSetup = Configuration du module BankStatementImport
-Settings = Réglages
-BankStatementImportSetupPage = Page de configuration du module BankStatementImport
-
-#
-# Page À propos
-#
+BankStatementImportAbout = À propos du module Import de relevés de banque
+BankStatementImportAboutPage = À propos du module Import de relevés de banque
 About = À propos
-BankStatementImportAbout = À propos de BankStatementImport
-BankStatementImportAboutPage = Page à propos de BankStatementImport
 
-#
-# Page d'exemple
-#
-MyPageName = Nom de ma page
+# Setup
+BankStatementImportSetup = Configuration du module Import de relevés de banque
+BankStatementImportSetupPage = Ici, vous pouvez configurer le module Import de relevés de banque. N’oubliez pas de sauvegarder vos modifications.
+ValueSaved = Valeur enregistrée
+Settings = Réglages
 
-#
-# Box d'exemple
-#
-MyWidget = Mon widget
-MyWidgetDescription = Description de mon widget
+BANKSTATEMENTIMPORT_SEPARATOR=Séparateur des données du fichier
+BANKSTATEMENTIMPORT_MAPPING=Colonnes du fichier CSV
+BANKSTATEMENTIMPORT_DATE_FORMAT=Format de date du fichier CSV
+BANKSTATEMENTIMPORT_HEADER=Le fichier contient une ligne d'en-tête
+BANKSTATEMENTIMPORT_MAC_COMPATIBILITY=Le fichier est à l’ancien format Mac
+BANKSTATEMENTIMPORT_HISTORY_IMPORT=Activer l'historisation des imports avec le contenu du fichier
+BANKSTATEMENTIMPORT_ALLOW_INVOICE_FROM_SEVERAL_THIRD=Autoriser le règlement / rapprochement sur des factures appartenant à différents tiers
+BANKSTATEMENTIMPORT_ALLOW_DRAFT_INVOICE=Autoriser le rapprochement sur des factures au statut brouillon (validation de la facture et création du règlement)
+BANKSTATEMENTIMPORT_UNCHECK_ALL_LINES=Décocher toutes les lignes lors de l'affichage des transactions provenant du fichier
+BANKSTATEMENTIMPORT_AUTO_CREATE_DISCOUNT=Convertir automatiquement les acomptes en reduction future si totalement réglés
+BANKSTATEMENTIMPORT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL=Chercher les lignes d'écritures bancaires par montant ET par libellé
+BANKSTATEMENTIMPORT_ALLOW_FREELINES=Autoriser la création d'écritures bancaires libres (non liées à un règlement)
+
+BANKSTATEMENTIMPORT_SEPARATOR_Help=Caractère utilisé pour séparer les colonnes de votre fichier CSV (habituellement ";" ou ",". Un seul caractère).
+BANKSTATEMENTIMPORT_MAPPING_Help=Correspondance des colonnes de votre fichier CSV. Attention, la correspondance doit forcément contenir les codes "date", "label", "debit" et "credit".<br>Si votre fichier ne contient qu'une seule colonne pour le montant de la transaction, utiliser "amount" et éventuellement, si vous avez une colonne sens, "direction=Mot clé pour débit" (par example "direction=DÉBIT" ou "direction=-") au lieu de "debit" et "credit".<br>Si votre fichier contient d'autres colonnes, nommez-les "null" dans la correspondance.
+BANKSTATEMENTIMPORT_DATE_FORMAT_Help=Format de date utilisé dans votre fichier CSV (%%d correspond au jour sur deux caractères, %%m au mois sur deux caractère et %%Y l'année sur 4 caractères). Par exemple la date 25/07/2013 correspond au format %%d/%%m/%%Y.
+BANKSTATEMENTIMPORT_HEADER_Help=Si activé, la première ligne du fichier CSV sera considérée comme une ligne d’en-tête et non de données.
+BANKSTATEMENTIMPORT_MAC_COMPATIBILITY_Help=Le fichier utilise le retour chariot comme caractère de fin de ligne
+BANKSTATEMENTIMPORT_HISTORY_IMPORT_Help= (<b>Attention : une ligne d'en-tête doit être présent dans votre fichier</b>)
+BANKSTATEMENTIMPORT_ALLOW_INVOICE_FROM_SEVERAL_THIRD_Help=
+BANKSTATEMENTIMPORT_ALLOW_DRAFT_INVOICE_Help=
+BANKSTATEMENTIMPORT_UNCHECK_ALL_LINES_Help=
+BANKSTATEMENTIMPORT_AUTO_CREATE_DISCOUNT_Help=
+BANKSTATEMENTIMPORT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL_Help=
+BANKSTATEMENTIMPORT_ALLOW_FREELINES_Help=

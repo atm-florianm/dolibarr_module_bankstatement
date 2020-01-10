@@ -20,7 +20,6 @@
 if (!defined('NOREQUIREUSER'))  define('NOREQUIREUSER', '1');
 if (!defined('NOREQUIREDB'))    define('NOREQUIREDB','1');
 if (!defined('NOREQUIRESOC'))   define('NOREQUIRESOC', '1');
-if (!defined('NOREQUIRETRAN'))  define('NOREQUIRETRAN','1');
 if (!defined('NOCSRFCHECK'))    define('NOCSRFCHECK', 1);
 if (!defined('NOTOKENRENEWAL')) define('NOTOKENRENEWAL', 1);
 if (!defined('NOLOGIN'))        define('NOLOGIN', 1);
@@ -28,35 +27,63 @@ if (!defined('NOREQUIREMENU'))  define('NOREQUIREMENU', 1);
 if (!defined('NOREQUIREHTML'))  define('NOREQUIREHTML', 1);
 if (!defined('NOREQUIREAJAX'))  define('NOREQUIREAJAX','1');
 
-
-/**
- * \file    bankstatementimport/js/bankstatementimport.js.php
- * \ingroup bankstatementimport
- * \brief   JavaScript file for module BankStatementImport.
- */
-
 // Load Dolibarr environment
-$res=0;
-// Try main.inc.php into web root known defined into CONTEXT_DOCUMENT_ROOT (not always defined)
-if (! $res && ! empty($_SERVER["CONTEXT_DOCUMENT_ROOT"])) $res=@include $_SERVER["CONTEXT_DOCUMENT_ROOT"]."/main.inc.php";
-// Try main.inc.php into web root detected using web root calculated from SCRIPT_FILENAME
-$tmp=empty($_SERVER['SCRIPT_FILENAME'])?'':$_SERVER['SCRIPT_FILENAME'];$tmp2=realpath(__FILE__); $i=strlen($tmp)-1; $j=strlen($tmp2)-1;
-while($i > 0 && $j > 0 && isset($tmp[$i]) && isset($tmp2[$j]) && $tmp[$i]==$tmp2[$j]) { $i--; $j--; }
-if (! $res && $i > 0 && file_exists(substr($tmp, 0, ($i+1))."/main.inc.php")) $res=@include substr($tmp, 0, ($i+1))."/main.inc.php";
-if (! $res && $i > 0 && file_exists(substr($tmp, 0, ($i+1))."/../main.inc.php")) $res=@include substr($tmp, 0, ($i+1))."/../main.inc.php";
-// Try main.inc.php using relative path
-if (! $res && file_exists("../../main.inc.php")) $res=@include "../../main.inc.php";
-if (! $res && file_exists("../../../main.inc.php")) $res=@include "../../../main.inc.php";
-if (! $res) die("Include of main fails");
+$mainIncludePath = '../../main.inc.php';
+for ($resInclude = 0, $depth = 0; !$resInclude && $depth < 5; $depth++) {
+	$resInclude = @include $mainIncludePath;
+	$mainIncludePath = '../' . $mainIncludePath;
+}
+if (!$resInclude) die ('Unable to include main.inc.php');
+
+global $langs, $user, $conf;
 
 // Define js type
 header('Content-Type: application/javascript');
 // Important: Following code is to cache this file to avoid page request by browser at each Dolibarr page access.
 // You can use CTRL+F5 to refresh your browser cache.
-if (empty($dolibarr_nocache)) header('Cache-Control: max-age=3600, public, must-revalidate');
+if (empty($dolibarr_nocache)) header('Cache-Control: max-age=60, public, must-revalidate');
 else header('Cache-Control: no-cache');
+$langs->load('bankstatementimport@bankstatementimport');
+
+echo 'let _trans = ' . json_encode($langs->tab_translate) . ';';
 ?>
+if (!_trans) _trans = [];
+
+/**
+ * Adds an onclick event to a "modify" button to save a configuration value.
+ * Example:
+ *   DOM: <input id="MY_CONF" name="MY_CONF" /> <button id="save_MY_CONF">Save</button>
+ *   Js:  ajaxSaveOnClick("MY_CONF")
+ *
+ * @param code  The constant name; the DOM must have a HTMLElement with the id "save_" + code
+ */
+function ajaxSaveOnClick(code) {
+	//console.log(code);
+	let url = '<?php echo DOL_URL_ROOT; ?>/core/ajax/constantonoff.php';
+	$("#save_" + code).click(
+		function(ev) {
+			let entity = '<?php echo $conf->entity; ?>';
+			let value = $('#' + code).val()
+			let action = 'set';
+			if (value == '') action = 'del';
+			ev.preventDefault();
+			$.get(
+				url,
+				{
+					action: action,
+					name: code,
+					entity: entity,
+					value: value
+				},
+				function () {
+					$.jnotify(_trans['ValueSaved']);
+				}
+			);
+		}
+	);
+}
+
 
 /* Javascript library of module BankStatementImport */
-
-
+window.addEventListener('load', function() {
+});
