@@ -17,29 +17,29 @@
 # Generic
 #
 
-# Module label 'ModuleBankStatementImportName'
-ModuleBankStatementImportName = BankStatementImport
-# Module description 'ModuleBankStatementImportDesc'
-ModuleBankStatementImportDesc = BankStatementImport description
+# Module label 'ModuleBankStatementName'
+ModuleBankStatementName = BankStatement
+# Module description 'ModuleBankStatementDesc'
+ModuleBankStatementDesc = BankStatement description
 
 #
 # Admin page
 #
-BankStatementImportSetup = BankStatementImport setup
+BankStatementSetup = BankStatement setup
 Settings = Settings
-BankStatementImportSetupPage = BankStatementImport setup page
-BANKSTATEMENTIMPORT_MYPARAM1 = My param 1
-BANKSTATEMENTIMPORT_MYPARAM1Tooltip = My param 1 tooltip
-BANKSTATEMENTIMPORT_MYPARAM2=My param 2
-BANKSTATEMENTIMPORT_MYPARAM2Tooltip=My param 2 tooltip
+BankStatementSetupPage = BankStatement setup page
+BANKSTATEMENT_MYPARAM1 = My param 1
+BANKSTATEMENT_MYPARAM1Tooltip = My param 1 tooltip
+BANKSTATEMENT_MYPARAM2=My param 2
+BANKSTATEMENT_MYPARAM2Tooltip=My param 2 tooltip
 
 
 #
 # About page
 #
 About = About
-BankStatementImportAbout = About BankStatementImport
-BankStatementImportAboutPage = BankStatementImport about page
+BankStatementAbout = About BankStatement
+BankStatementAboutPage = BankStatement about page
 
 #
 # Sample page

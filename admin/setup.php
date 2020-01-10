@@ -17,9 +17,9 @@
  */
 
 /**
- * \file    bankstatementimport/admin/setup.php
- * \ingroup bankstatementimport
- * \brief   BankStatementImport setup page.
+ * \file    bankstatement/admin/setup.php
+ * \ingroup bankstatement
+ * \brief   BankStatement setup page.
  */
 
 // Load Dolibarr environment
@@ -34,10 +34,10 @@ global $langs, $user;
 
 // Libraries
 require_once DOL_DOCUMENT_ROOT . "/core/lib/admin.lib.php";
-require_once '../lib/bankstatementimport.lib.php';
+require_once '../lib/bankstatement.lib.php';
 
 // Translations
-$langs->loadLangs(array("admin", "bankstatementimport@bankstatementimport"));
+$langs->loadLangs(array("admin", "bankstatement@bankstatement"));
 
 // Access control
 if (! $user->admin) accessforbidden();
@@ -52,18 +52,18 @@ $defaultParameters = array(
 	'type'      => 'text'
 );
 $specificParameters=array(
-	'BANKSTATEMENTIMPORT_SEPARATOR'                           => array('pattern' => '^.$'),
-	'BANKSTATEMENTIMPORT_MAPPING'                             => array(),
-	'BANKSTATEMENTIMPORT_DATE_FORMAT'                         => array(),
-	'BANKSTATEMENTIMPORT_HEADER'                              => array('type' => 'bool'),
-	'BANKSTATEMENTIMPORT_MAC_COMPATIBILITY'                   => array('type' => 'bool'),
-	'BANKSTATEMENTIMPORT_HISTORY_IMPORT'                      => array('type' => 'bool'),
-	'BANKSTATEMENTIMPORT_ALLOW_INVOICE_FROM_SEVERAL_THIRD'    => array('type' => 'bool'),
-	'BANKSTATEMENTIMPORT_ALLOW_DRAFT_INVOICE'                 => array('type' => 'bool'),
-	'BANKSTATEMENTIMPORT_UNCHECK_ALL_LINES'                   => array('type' => 'bool'),
-	'BANKSTATEMENTIMPORT_AUTO_CREATE_DISCOUNT'                => array('type' => 'bool'),
-	'BANKSTATEMENTIMPORT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL' => array('type' => 'bool'),
-	'BANKSTATEMENTIMPORT_ALLOW_FREELINES'                     => array('type' => 'bool')
+	'BANKSTATEMENT_SEPARATOR'                           => array('pattern' => '^.$'),
+	'BANKSTATEMENT_MAPPING'                             => array(),
+	'BANKSTATEMENT_DATE_FORMAT'                         => array(),
+	'BANKSTATEMENT_HEADER'                              => array('type' => 'bool'),
+	'BANKSTATEMENT_MAC_COMPATIBILITY'                   => array('type' => 'bool'),
+	'BANKSTATEMENT_HISTORY_IMPORT'                      => array('type' => 'bool'),
+	'BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD'    => array('type' => 'bool'),
+	'BANKSTATEMENT_ALLOW_DRAFT_INVOICE'                 => array('type' => 'bool'),
+	'BANKSTATEMENT_UNCHECK_ALL_LINES'                   => array('type' => 'bool'),
+	'BANKSTATEMENT_AUTO_CREATE_DISCOUNT'                => array('type' => 'bool'),
+	'BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL' => array('type' => 'bool'),
+	'BANKSTATEMENT_ALLOW_FREELINES'                     => array('type' => 'bool')
 );
 $arrayofparameters = array_map(
 	function($specificParameters) use ($defaultParameters) {
@@ -81,17 +81,17 @@ $arrayofparameters = array_map(
  * View
  */
 
-$page_name = "BankStatementImportSetup";
+$page_name = "BankStatementSetup";
 llxHeader('', $langs->trans($page_name));
 
 // Subheader
 $linkback = '<a href="'.($backtopage?$backtopage:DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1').'">'.$langs->trans("BackToModuleList").'</a>';
 
-print load_fiche_titre($langs->trans($page_name), $linkback, 'object_bankstatementimport@bankstatementimport');
+print load_fiche_titre($langs->trans($page_name), $linkback, 'object_bankstatement@bankstatement');
 
 // Configuration header
-$head = bankstatementimportAdminPrepareHead();
-dol_fiche_head($head, 'settings', '', -1, "bankstatementimport@bankstatementimport");
+$head = bankstatementAdminPrepareHead();
+dol_fiche_head($head, 'settings', '', -1, "bankstatement@bankstatement");
 
 function get_conf_label($confName, $parameters, $form) {
 	global $langs;
@@ -148,7 +148,7 @@ function get_conf_input($confName, $parameters) {
 $form = new Form($db);
 // Setup page goes here
 ?>
-<p><?php echo $langs->trans("BankStatementImportSetupPage"); ?></p>
+<p><?php echo $langs->trans("BankStatementSetupPage"); ?></p>
 <table class="noborder" width="100%">
 	<colgroup><col id="setupConfLabelColumn"/><col id="setupConfValueColumn" /></colgroup>
 	<thead>

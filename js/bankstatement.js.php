@@ -44,7 +44,7 @@ header('Content-Type: application/javascript');
 // You can use CTRL+F5 to refresh your browser cache.
 if (empty($dolibarr_nocache)) header('Cache-Control: max-age=60, public, must-revalidate');
 else header('Cache-Control: no-cache');
-$langs->load('bankstatementimport@bankstatementimport');
+$langs->load('bankstatement@bankstatement');
 
 echo 'let _trans = ' . json_encode($langs->tab_translate) . ';';
 ?>
@@ -90,7 +90,7 @@ function ajaxSaveOnClick(code) {
 }
 
 
-/* Javascript library of module BankStatementImport */
+/* Javascript library of module BankStatement */
 window.addEventListener('load', function() {
 	$('form input').bind(
 		'invalid',

@@ -16,9 +16,9 @@
  */
 
 /**
- * \file    bankstatementimport/css/bankstatementimport.css.php
- * \ingroup bankstatementimport
- * \brief   CSS file for module BankStatementImport.
+ * \file    bankstatement/css/bankstatement.css.php
+ * \ingroup bankstatement
+ * \brief   CSS file for module BankStatement.
  */
 
 // Define css type

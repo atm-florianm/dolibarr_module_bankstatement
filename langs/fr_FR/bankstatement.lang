@@ -1,0 +1,61 @@
+# Copyright (C) 2020 SuperAdmin
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Module label
+ModuleBankStatementName = Import de relevés de banque
+
+# Module description
+ModuleBankStatementDesc = Permet d’importer des relevés de comptes bancaires en CSV pour rapprochement automatique
+BankStatementAbout = À propos du module Import de relevés de banque
+BankStatementAboutPage = À propos du module Import de relevés de banque
+About = À propos
+
+# Menus
+LeftMenuBankStatement=Import de relevés de banque
+
+# Setup
+BankStatementSetup = Configuration du module Import de relevés de banque
+BankStatementSetupPage = Ici, vous pouvez configurer le module Import de relevés de banque. N’oubliez pas de sauvegarder vos modifications.
+ValueSaved = Valeur enregistrée
+Settings = Réglages
+
+BANKSTATEMENT_SEPARATOR=Séparateur des données du fichier
+BANKSTATEMENT_MAPPING=Colonnes du fichier CSV
+BANKSTATEMENT_DATE_FORMAT=Format de date du fichier CSV
+BANKSTATEMENT_HEADER=Le fichier contient une ligne d'en-tête
+BANKSTATEMENT_MAC_COMPATIBILITY=Le fichier est à l’ancien format Mac
+BANKSTATEMENT_HISTORY_IMPORT=Activer l'historisation des imports avec le contenu du fichier
+BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD=Autoriser le règlement / rapprochement sur des factures appartenant à différents tiers
+BANKSTATEMENT_ALLOW_DRAFT_INVOICE=Autoriser le rapprochement sur des factures au statut brouillon (validation de la facture et création du règlement)
+BANKSTATEMENT_UNCHECK_ALL_LINES=Décocher toutes les lignes lors de l'affichage des transactions provenant du fichier
+BANKSTATEMENT_AUTO_CREATE_DISCOUNT=Convertir automatiquement les acomptes en reduction future si totalement réglés
+BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL=Chercher les lignes d'écritures bancaires par montant ET par libellé
+BANKSTATEMENT_ALLOW_FREELINES=Autoriser la création d'écritures bancaires libres (non liées à un règlement)
+
+BANKSTATEMENT_SEPARATOR_Help=Caractère utilisé pour séparer les colonnes de votre fichier CSV (habituellement ";" ou ",". Un seul caractère).
+BANKSTATEMENT_MAPPING_Help=Correspondance des colonnes de votre fichier CSV. Attention, la correspondance doit forcément contenir les codes "date", "label", "debit" et "credit".<br>Si votre fichier ne contient qu'une seule colonne pour le montant de la transaction, utiliser "amount" et éventuellement, si vous avez une colonne sens, "direction=Mot clé pour débit" (par example "direction=DÉBIT" ou "direction=-") au lieu de "debit" et "credit".<br>Si votre fichier contient d'autres colonnes, nommez-les "null" dans la correspondance.
+BANKSTATEMENT_DATE_FORMAT_Help=Format de date utilisé dans votre fichier CSV (%%d correspond au jour sur deux caractères, %%m au mois sur deux caractère et %%Y l'année sur 4 caractères). Par exemple la date 25/07/2013 correspond au format %%d/%%m/%%Y.
+BANKSTATEMENT_HEADER_Help=Si activé, la première ligne du fichier CSV sera considérée comme une ligne d’en-tête et non de données.
+BANKSTATEMENT_MAC_COMPATIBILITY_Help=Le fichier utilise le retour chariot comme caractère de fin de ligne
+BANKSTATEMENT_HISTORY_IMPORT_Help= (<b>Attention : une ligne d'en-tête doit être présent dans votre fichier</b>)
+BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD_Help=
+BANKSTATEMENT_ALLOW_DRAFT_INVOICE_Help=
+BANKSTATEMENT_UNCHECK_ALL_LINES_Help=
+BANKSTATEMENT_AUTO_CREATE_DISCOUNT_Help=
+BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL_Help=
+BANKSTATEMENT_ALLOW_FREELINES_Help=
+
+ErrorInputDoesNotMatchPattern=Non sauvegardé : saisie non conforme au format demandé.

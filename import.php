@@ -16,9 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Permet de gérer les fichier ayant une fin de ligne MAC (suite retour client) (http://stackoverflow.com/questions/4541749/fgetcsv-fails-to-read-line-ending-in-mac-formatted-csv-file-any-better-solution)
+// Load Dolibarr environment
+$mainIncludePath = '../../main.inc.php';
+$MAX_BACKTRACK=5; // max depth for finding 'main.inc.php' in parent directories
+for ($resInclude = 0, $depth = 0; !$resInclude && $depth < $MAX_BACKTRACK; $depth++) {
+	$resInclude = @include $mainIncludePath;
+	$mainIncludePath = '../' . $mainIncludePath;
+}
+if (!$resInclude) die ('Unable to include main.inc.php');
 
-require 'config.php';
+require_once 'class/bankstatement.class.php';
 
 dol_include_once('/bankimport/class/bankimport.class.php');
 dol_include_once('/compta/facture/class/facture.class.php');
