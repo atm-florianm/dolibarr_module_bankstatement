@@ -78,7 +78,7 @@ class modBankStatementImport extends DolibarrModules
 		// Name of image file used for this module.
 		// If file is in theme/yourtheme/img directory under name object_pictovalue.png, use this->picto='pictovalue'
 		// If file is in module/img directory under name object_pictovalue.png, use this->picto='pictovalue@module'
-		$this->picto='bankimport@bankimport';
+		$this->picto='bankstatementimport@bankstatementimport';
 
 		// Define some features supported by module (triggers, login, substitutions, menus, css, etc...)
 		$this->module_parts = array(
@@ -124,13 +124,6 @@ class modBankStatementImport extends DolibarrModules
 		}
 
 		// Array to add new pages in new tabs
-		$this->tabs = array(
-			array('bank' => 'bank:+bankimport:'
-				. $langs->trans('AccountStatements')
-				. ':bankstatementimport@bankstatementimport'
-				. ':$conf->bankstatementimport->enabled'
-				. ':/bankstatementimport/statement.php?account=__ID__')
-		);
 
 		// Dictionaries
 		$this->dictionaries=array();
@@ -156,11 +149,20 @@ class modBankStatementImport extends DolibarrModules
 		// Main menu entries
 		$this->menu = array();    // List of menus to add
 		$r=0;
-
-		// Add here entries to declare new menus
-
-		/* BEGIN MODULEBUILDER TOPMENU */
-		$this->menu=array();                                    // 0=Menu for internal users, 1=external users, 2=both
+		$this->menu[$r]=array(
+			'fk_menu'=>'fk_mainmenu=bank',
+			'type'=>'left',
+			'titre'=>'LeftMenuBankStatementImport',
+			'mainmenu'=>'bank',
+			'leftmenu'=>'bankstatementimport',
+			'url'=>'/bankstatementimport/import.php',
+			'langs'=>'bankstatementimport@bankstatementimport',
+			'position'=>100,
+			'enabled'=>'$conf->bankstatementimport->enabled',
+			'perms'=>'$user->rights->bankstatementimport->read',
+			'target'=>'',
+			'user'=>0
+		);
 
 		// Exports
 	}

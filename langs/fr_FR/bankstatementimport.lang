@@ -23,6 +23,9 @@ BankStatementImportAbout = À propos du module Import de relevés de banque
 BankStatementImportAboutPage = À propos du module Import de relevés de banque
 About = À propos
 
+# Menus
+LeftMenuBankStatementImport=Import de relevés de banque
+
 # Setup
 BankStatementImportSetup = Configuration du module Import de relevés de banque
 BankStatementImportSetupPage = Ici, vous pouvez configurer le module Import de relevés de banque. N’oubliez pas de sauvegarder vos modifications.
@@ -54,3 +57,5 @@ BANKSTATEMENTIMPORT_UNCHECK_ALL_LINES_Help=
 BANKSTATEMENTIMPORT_AUTO_CREATE_DISCOUNT_Help=
 BANKSTATEMENTIMPORT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL_Help=
 BANKSTATEMENTIMPORT_ALLOW_FREELINES_Help=
+
+ErrorInputDoesNotMatchPattern=Non sauvegardé : saisie non conforme au format demandé.

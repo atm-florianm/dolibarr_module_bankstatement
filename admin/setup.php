@@ -52,7 +52,7 @@ $defaultParameters = array(
 	'type'      => 'text'
 );
 $specificParameters=array(
-	'BANKSTATEMENTIMPORT_SEPARATOR'                           => array(),
+	'BANKSTATEMENTIMPORT_SEPARATOR'                           => array('pattern' => '^.$'),
 	'BANKSTATEMENTIMPORT_MAPPING'                             => array(),
 	'BANKSTATEMENTIMPORT_DATE_FORMAT'                         => array(),
 	'BANKSTATEMENTIMPORT_HEADER'                              => array('type' => 'bool'),
@@ -93,18 +93,27 @@ print load_fiche_titre($langs->trans($page_name), $linkback, 'object_bankstateme
 $head = bankstatementimportAdminPrepareHead();
 dol_fiche_head($head, 'settings', '', -1, "bankstatementimport@bankstatementimport");
 
-function get_form_for_input($confName, $parameters) {
-	global $conf, $langs;
-	$script = '<script type="application/javascript"></script>';
-	return sprintf(
-		'<form method="POST" action="%s">'
-		. '<input type="hidden" name="token" value="%S" />'
-		. '</form>');
+function get_conf_label($confName, $parameters, $form) {
+	global $langs;
+	$confHelp = $langs->trans($confName . '_Help');
+	$confLabel = sprintf(
+		'<label for="%s">%s</label>',
+		$confName,
+		$langs->trans($confName)
+	);
+
+	if (!empty($langs->tab_translate[$confName . '_Help'])) {
+		// help translation found: display help picto
+		return $form->textwithpicto($confLabel, $confHelp);
+	} else {
+		// help translation not found: only display label
+		return $confLabel;
+	}
 }
 
-function get_conf_input($confName, $parameters, $mode='edit') {
+function get_conf_input($confName, $parameters) {
 	global $conf, $langs;
-	$value = isset($conf->global->{$confName}) ? $conf->global->{$confName} : '';
+	$confValue = isset($conf->global->{$confName}) ? $conf->global->{$confName} : '';
 	$inputAttrs = sprintf(
 		'name="%s" id="%s" class="%s"',
 		htmlspecialchars($confName, ENT_COMPAT),
@@ -112,105 +121,62 @@ function get_conf_input($confName, $parameters, $mode='edit') {
 		htmlspecialchars($parameters['css'], ENT_COMPAT)
 	);
 	switch ($parameters['type']) {
-		case 'bool': return ajax_constantonoff($confName);
-		case 'text': return sprintf(
-				'<input %s type="text" value="%s" /> <button class="but" id="save_%s">%s</button>',
+		case 'bool':
+			$input = ajax_constantonoff($confName);
+			break;
+		case 'text':
+			if (isset($parameters['pattern'])) {
+				$inputAttrs .= ' pattern="' . $parameters['pattern'] . '"';
+			}
+			$input = sprintf(
+				'<input %s type="text" value="%s" /> <button class="but" id="btn_save_%s">%s</button>',
 				$inputAttrs,
-				htmlspecialchars($value, ENT_COMPAT),
+				htmlspecialchars($confValue, ENT_COMPAT),
 				$confName,
 				$langs->trans('Modify')
 			) . '<script type="text/javascript">$(()=>ajaxSaveOnClick("'.htmlspecialchars($confName, ENT_COMPAT).'"));</script>';
+			break;
+		default:
+			$input = $confValue;
 	}
-	return $value;
+	return '<form method="POST" id="form_save_' . $confName . '" action="' . $_SERVER['PHP_SELF'] . '">'
+		   . '<input type="hidden" name="token" value="' . $_SESSION['newtoken'] . '" />'
+		   . '<input type="hidden" name="action" value="update" />'
+		   . $input
+		   . '</form>';
 }
-
+$form = new Form($db);
 // Setup page goes here
 ?>
 <p><?php echo $langs->trans("BankStatementImportSetupPage"); ?></p>
-<form method="POST" action="<?php echo $_SERVER['PHP_SELF']; ?>">
-	<input type="hidden" name="token" value="<?php echo $_SESSION['newtoken']; ?>" />
-	<input type="hidden" name="action" value="update" />
-	<table class="noborder" width="100%">
-		<thead>
-		<tr class="liste_titre">
-			<td class="titlefield">
-				<?php echo $langs->trans("Parameter"); ?>
-			</td>
-			<td>
-				<?php echo $langs->trans("Value"); ?>
-			</td>
-		</tr>
-		</thead>
-		<tbody>
-		<?php
-		foreach ($arrayofparameters as $confName => $confParams) {
-			printf(
-				'<tr class="oddeven">'
-				. '<td>%s</td>'
-				. '<td>%s</td>'
-				. '</tr>',
-				$langs->trans($confName),
-				get_conf_input($confName, $arrayofparameters[$confName])
-			);
-		}
-		?>
-		</tbody>
-	</table>
-</form>
-
+<table class="noborder" width="100%">
+	<colgroup><col id="setupConfLabelColumn"/><col id="setupConfValueColumn" /></colgroup>
+	<thead>
+	<tr class="liste_titre">
+		<td class="titlefield">
+			<?php echo $langs->trans("Parameter"); ?>
+		</td>
+		<td>
+			<?php echo $langs->trans("Value"); ?>
+		</td>
+	</tr>
+	</thead>
+	<tbody>
+	<?php
+	foreach ($arrayofparameters as $confName => $confParams) {
+		printf(
+			'<tr class="oddeven">'
+			. '<td>%s</td>'
+			. '<td>%s</td>'
+			. '</tr>',
+			get_conf_label($confName, $arrayofparameters[$confName], $form),
+			get_conf_input($confName, $arrayofparameters[$confName])
+		);
+	}
+	?>
+	</tbody>
+</table>
 <?php
-
-goto stop;
-if ($action == 'edit')
-{
-	print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">';
-	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
-	print '<input type="hidden" name="action" value="update">';
-
-	print '<table class="noborder" width="100%">';
-	print '<tr class="liste_titre"><td class="titlefield">'.$langs->trans("Parameter").'</td><td>'.$langs->trans("Value").'</td></tr>';
-
-	foreach($arrayofparameters as $key => $val)
-	{
-		print '<tr class="oddeven"><td>';
-		print $form->textwithpicto($langs->trans($key),$langs->trans($key.'Tooltip'));
-		print '</td><td><input name="'.$key.'"  class="flat '.(empty($val['css'])?'minwidth200':$val['css']).'" value="' . $conf->global->$key . '"></td></tr>';
-	}
-	print '</table>';
-
-	print '<br><div class="center">';
-	print '<input class="button" type="submit" value="'.$langs->trans("Save").'">';
-	print '</div>';
-
-	print '</form>';
-	print '<br>';
-}
-else
-{
-	if (! empty($arrayofparameters))
-	{
-		print '<table class="noborder" width="100%">';
-		print '<tr class="liste_titre"><td class="titlefield">'.$langs->trans("Parameter").'</td><td>'.$langs->trans("Value").'</td></tr>';
-
-		foreach($arrayofparameters as $key => $val)
-		{
-			print '<tr class="oddeven"><td>';
-			print $form->textwithpicto($langs->trans($key),$langs->trans($key.'Tooltip'));
-			print '</td><td>' . $conf->global->$key . '</td></tr>';
-		}
-
-		print '</table>';
-
-		print '<div class="tabsAction">';
-		print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?action=edit">'.$langs->trans("Modify").'</a>';
-		print '</div>';
-	}
-	else
-	{
-		print '<br>'.$langs->trans("NothingToSetup");
-	}
-}
-stop:
 
 // Page end
 dol_fiche_end();

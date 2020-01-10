@@ -29,7 +29,8 @@ if (!defined('NOREQUIREAJAX'))  define('NOREQUIREAJAX','1');
 
 // Load Dolibarr environment
 $mainIncludePath = '../../main.inc.php';
-for ($resInclude = 0, $depth = 0; !$resInclude && $depth < 5; $depth++) {
+$MAX_BACKTRACK=5; // max depth for finding 'main.inc.php' in parent directories
+for ($resInclude = 0, $depth = 0; !$resInclude && $depth < $MAX_BACKTRACK; $depth++) {
 	$resInclude = @include $mainIncludePath;
 	$mainIncludePath = '../' . $mainIncludePath;
 }
@@ -50,23 +51,27 @@ echo 'let _trans = ' . json_encode($langs->tab_translate) . ';';
 if (!_trans) _trans = [];
 
 /**
- * Adds an onclick event to a "modify" button to save a configuration value.
+ * Asynchronously save a setup config value when the conf-specific form is submitted.
+ *
  * Example:
- *   DOM: <input id="MY_CONF" name="MY_CONF" /> <button id="save_MY_CONF">Save</button>
+ *   DOM:
+ *   <form>
+ *       <input id="MY_CONF" name="MY_CONF" />
+ *       <button id="save_MY_CONF">Save</button>
+ *   </form>
  *   Js:  ajaxSaveOnClick("MY_CONF")
  *
  * @param code  The constant name; the DOM must have a HTMLElement with the id "save_" + code
  */
 function ajaxSaveOnClick(code) {
-	//console.log(code);
+	// TODO: replace constantonoff.php with a dedicated ajax backend (would be cleaner)
 	let url = '<?php echo DOL_URL_ROOT; ?>/core/ajax/constantonoff.php';
-	$("#save_" + code).click(
+	$("#" + code).closest('form').submit(
 		function(ev) {
 			let entity = '<?php echo $conf->entity; ?>';
 			let value = $('#' + code).val()
 			let action = 'set';
 			if (value == '') action = 'del';
-			ev.preventDefault();
 			$.get(
 				url,
 				{
@@ -76,9 +81,10 @@ function ajaxSaveOnClick(code) {
 					value: value
 				},
 				function () {
-					$.jnotify(_trans['ValueSaved']);
+					$.jnotify(_trans['ValueSaved'], 'mesgs');
 				}
 			);
+			ev.preventDefault();
 		}
 	);
 }
@@ -86,4 +92,11 @@ function ajaxSaveOnClick(code) {
 
 /* Javascript library of module BankStatementImport */
 window.addEventListener('load', function() {
+	$('form input').bind(
+		'invalid',
+		function(ev) {
+			$.jnotify(_trans['ErrorInputDoesNotMatchPattern'], 'error');
+			ev.preventDefault();
+		}
+	);
 });
