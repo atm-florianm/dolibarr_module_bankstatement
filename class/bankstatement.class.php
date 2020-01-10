@@ -1,715 +1,986 @@
 <?php
+/* Copyright (C) 2017  Laurent Destailleur <eldy@users.sourceforge.net>
+ * Copyright (C) ---Put here your own copyright and developer email---
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
-dol_include_once('/compta/bank/class/account.class.php');
-dol_include_once('/compta/paiement/cheque/class/remisecheque.class.php');
-require_once DOL_DOCUMENT_ROOT . '/societe/class/societe.class.php';
-require_once DOL_DOCUMENT_ROOT . '/user/class/user.class.php';
-require_once DOL_DOCUMENT_ROOT . '/adherents/class/adherent.class.php';
-require_once DOL_DOCUMENT_ROOT . '/compta/sociales/class/chargesociales.class.php';
+/**
+ * \file        class/bankstatement.class.php
+ * \ingroup     bankstatement
+ * \brief       This file is a CRUD class file for BankStatement (Create/Read/Update/Delete)
+ */
 
-class BankImport
+// Put here all includes required by your class file
+require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
+//require_once DOL_DOCUMENT_ROOT . '/societe/class/societe.class.php';
+//require_once DOL_DOCUMENT_ROOT . '/product/class/product.class.php';
+
+/**
+ * Class for BankStatement
+ */
+class BankStatement extends CommonObject
 {
-	/** @var string Negative direction token */
-	private $neg_dir;
-
-	protected $db;
-
-	/** @var Account */
-	public $account;
-	public $file;
-	
-	public $dateStart;
-	public $dateEnd;
-	public $numReleve;
-	public $hasHeader;
-	public $lineHeader; // Si on historise, on concerve le header d'origine pour avoir le bon intitulé dans nos future tableaux
-	public $TOriginLine=array(); // Contient les lignes d'origin du fichier, pour l'historisation 
-	
-	public $TBank = array(); // Will contain all account lines of the period
-	public $TCheckReceipt = array(); // Will contain check receipt made for account lines of the period
-	public $TFile = array(); // Will contain all file lines
-	
-	public $nbCreated = 0;
-	public $nbReconciled = 0;
-	
-	function __construct($db) {
-		$this->db = &$db;
-		$this->dateStart = strtotime('first day of last month');
-		$this->dateEnd = strtotime('last day of last month');
-	}
-	
 	/**
-	 * Set vars we will work with
+	 * @var string ID to identify managed object
 	 */
-	function analyse($accountId, $filename, $dateStart, $dateEnd, $numReleve, $hasHeader) {
-		global $conf, $langs;
-		
-		// Bank account selected
-		if($accountId <= 0) {
-			setEventMessage($langs->trans('ErrorAccountIdNotSelected'), 'errors');
-			return false;
-		} else {
-			$this->account = new Account($this->db);
-			$this->account->fetch($accountId);
-		}
-		
-		// Start and end date regarding bank statement
-		$this->dateStart = $dateStart;
-		$this->dateEnd = $dateEnd;
-		
-		// Statement number
-		$this->numReleve = $numReleve;
-		$this->hasHeader = $hasHeader;
-		
-		// Bank statement file (csv or filename if csv already uploaded)
-		if(is_file($filename)) {
-			$this->file = $filename;
-		} else if(!empty($_FILES[$filename])) {
-			
-			if($_FILES[$filename]['error'] != 0) {
-				setEventMessage($langs->trans('ErrorFile' . $_FILES[$filename]['error']), 'errors');
-				return false;
-			}/* else if($_FILES[$filename]['type'] != 'text/csv' && $_FILES[$filename]['type'] != 'text/plain' &&  && $_FILES[$filename]['type'] != 'application/octet-stream') {
-				setEventMessage($langs->trans('ErrorFileIsNotCSV') . ' ' . $_FILES[$filename]['type'], 'errors');
-				return false;
-			}*/ 
-			else {
-				
-				dol_include_once('/core/lib/files.lib.php');
-				dol_include_once('/core/lib/images.lib.php');
-				$upload_dir = $conf->bankimport->dir_output . '/' . dol_sanitizeFileName($this->account->ref);
-				
-				dol_add_file_process($upload_dir,1,1,$filename);
-				$this->file = $upload_dir . '/' . $_FILES[$filename]['name'];
-				
-				if(!is_file($this->file)) {
-					return false;
-				}
-			}
-		}
-		
-		return true;
-	}
-	
-	function load_transactions($delimiter='', $dateFormat='', $mapping_string='', $enclosure='"') {
-		$this->load_bank_transactions();
-		$this->load_check_receipt();
-		$this->load_file_transactions($delimiter, $dateFormat, $mapping_string, $enclosure);
-	}
-	
-	// Load bank lines
-	function load_bank_transactions() {
-		$sql = "SELECT rowid FROM " . MAIN_DB_PREFIX . "bank WHERE fk_account = " . $this->account->id . " ";
-		$sql.= "AND dateo BETWEEN '" . date('Y-m-d', $this->dateStart) . "' AND '" . date('Y-m-d', $this->dateEnd) . "' ";
-		$sql.= "ORDER BY datev DESC";
-		
-		$resql = $this->db->query($sql);
-		$TBankLineId = array();
-		while($obj = $this->db->fetch_object($resql)) {
-			$TBankLineId[] = $obj->rowid;
-		}
-		
-		foreach($TBankLineId as $bankid) {
-			$bankLine = new AccountLine($this->db);
-			$bankLine->fetch($bankid);
-			$this->TBank[$bankid] = $bankLine;
-		}
-	}
-	
-	// Load check receipt regarding bank lines
-	function load_check_receipt() {
-		foreach($this->TBank as $bankLine) {
-			if($bankLine->fk_bordereau > 0 && empty($this->TCheckReceipt[$bankLine->fk_bordereau])) {
-				$bord = new RemiseCheque($this->db);
-				$bord->fetch($bankLine->fk_bordereau);
-				
-				$this->TCheckReceipt[$bankLine->fk_bordereau] = $bord;
-			}
-		}
-	}
+	public $element = 'bankstatement';
 
-	// Load file lines
-	function load_file_transactions($delimiter='', $dateFormat='', $mapping_string='', $enclosure='"') {
-		global $conf, $langs;
-
-		if(empty($delimiter)) $delimiter = $conf->global->BANKIMPORT_SEPARATOR;
-		if(empty($dateFormat)) $dateFormat = strtr($conf->global->BANKIMPORT_DATE_FORMAT, array('%'=>''));
-		if(empty($mapping_string)) $mapping_string = $conf->global->BANKIMPORT_MAPPING;
-		$mapping_string = preg_replace_callback('|=(.*)' . $delimiter . '|', 'BankImport::extractNegDir', $mapping_string);
-		
-		if($delimiter == '\t')$delimiter="\t";
-		
-		if(strpos($mapping_string,$delimiter) === false) $mapping = explode(";", $mapping_string); // pour le \t
-		else $mapping = explode($delimiter, $mapping_string); // pour le \t
-
-		$f1 = fopen($this->file, 'r');
-		if($this->hasHeader) $this->lineHeader = fgets($f1, 4096);
-		
-		while(!feof($f1)) {
-
-			if(!empty($conf->global->BANKIMPORT_MAC_COMPATIBILITY)) {
-				$ligne = fgets($f1, 4096);
-				if (empty($ligne)) continue;
-//				print '<hr>'.$ligne.'<br />';
-				$dataline = str_getcsv(trim($ligne), $delimiter, $enclosure);
-
-			}
-			else {
-				$dataline = fgetcsv($f1, 4096, $delimiter, $enclosure);
-				if (empty($dataline)) continue;
-			}
-//		  var_dump($dataline, $delimiter, $enclosure);
-
-			$mapping_en_colonne = (strpos($mapping_string, ':') !== false) ? true : false;
-
-			if((count($dataline) == count($mapping)) || $mapping_en_colonne) {
-				$this->TOriginLine[] = $dataline;
-				
-				if($mapping_en_colonne) $data = $this->construct_data_tab_column_file($mapping, $dataline[0]);
-				else $data = array_combine($mapping, $dataline);
-				
-				// Gestion du montant débit / crédit
-				if (empty($data['debit']) && empty($data['credit'])) {
-					$amount = (float)price2num($data['amount']);
-
-					// Direction support
-					if (!empty($data['direction'])) {
-						if ($data['direction'] == $this->neg_dir) {
-							$amount *= -1;
-						}
-					}
-
-					if ($amount >= 0) {
-						$data['credit'] = $amount;
-					} elseif ($amount < 0) {
-						$data['debit'] = $amount;
-					}
-				} else {
-					$data['debit'] = (float)price2num($data['debit']);
-					 
-					if ($data['debit'] > 0) {
-						$data['debit'] *= -1;
-					}
-					$data['credit'] = (float)price2num($data['credit']);
-				}
-				
-				$data['amount'] = (!empty($data['debit']) ? $data['debit'] : $data['credit']);
-				
-				//$time = date_parse_from_format($dateFormat, $data['date']);
-				//$data['datev'] = mktime(0, 0, 0, $time['month'], $time['day'], $time['year']+2000);
-
-				// TODO : Apparemment createFromFormat ne fonctionne pas si PHP < 5.3 ....
-				$datetime = DateTime::createFromFormat($dateFormat, $data['date']);
-				
-				$data['datev'] = ($datetime === false) ? 0 : $datetime->getTimestamp();
-				
-				$data['error'] = '';
-			} else {
-				$data = array();
-				$data['error'] = $langs->trans('LineDoesNotMatchWithMapping');
-			}
-			
-			$this->TFile[] = $data;
-		}
-		
-		fclose($f1);
-	}
-
-	function construct_data_tab_column_file(&$mapping, $data) {
-		
-		$TDataFinal = array();
-		$pos = 0;
-		foreach($mapping as $m) {
-			
-			$TTemp = explode(':', $m);
-			
-			$label_colonne = $TTemp[0];
-			$nb_car = $TTemp[1];
-			$res = substr($data, $pos, $nb_car);
-			$res = trim($res);
-			$TDataFinal[$label_colonne] = $res;
-			$pos += $nb_car;
-		}
-		
-		return $TDataFinal;
-		
-	}
-	
-	function compare_transactions() {
-		
-		// For each file transaction, we search in Dolibarr bank transaction if there is a match by amount
-		foreach($this->TFile as &$fileLine) {
-			$amount = price2num($fileLine['amount']); // Transform to numeric string
-			if(is_numeric($amount)) {
-				$transac = $this->search_dolibarr_transaction_by_amount($amount, $fileLine['label']);
-				if($transac === false) $transac = $this->search_dolibarr_transaction_by_receipt($amount);
-				$fileLine['bankline'] = $transac;
-			}
-		}
-	}
-	
-	private function search_dolibarr_transaction_by_amount($amount, $label) {
-		global $conf, $langs;
-		$langs->load("banks");
-		
-		$amount = floatval($amount); // Transform to float
-		foreach($this->TBank as $i => $bankLine) {
-			$test = ($amount == $bankLine->amount);
-			if($conf->global->BANKIMPORT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL) $test = ($amount == $bankLine->amount && $label == $bankLine->label);
-			if(!empty($test)) {
-				unset($this->TBank[$i]);
-				
-				return array($this->get_bankline_data($bankLine));
-			}
-		}
-		
-		return false;
-	}
-
-	private function search_dolibarr_transaction_by_receipt($amount) {
-		global $langs;
-		$langs->load("banks");
-		
-		$amount = floatval($amount); // Transform to float
-		foreach($this->TCheckReceipt as $bordereau) {
-			if($amount == $bordereau->amount) {
-				$TBankLine = array();
-				foreach($this->TBank as $i => $bankLine) {
-					if($bankLine->fk_bordereau == $bordereau->id) {
-						unset($this->TBank[$i]);
-						
-						$TBankLine[] = $this->get_bankline_data($bankLine);
-					}
-				}
-				
-				return $TBankLine;
-			}
-		}
-		
-		return false;
-	}
-
-	private function get_bankline_data($bankLine) {
-		global $langs, $db;
-		
-		if(!empty($bankLine->num_releve)) {
-			$link = '<a href="' . dol_buildpath(
-				'/compta/bank/releve.php'
-					. '?num=' . $bankLine->num_releve
-					. '&account=' . $bankLine->fk_account, 2
-				) . '">'
-				. $bankLine->num_releve
-				. '</a>';
-			$result = $langs->trans('AlreadyReconciledWithStatement', $link);
-			$autoaction = false;
-		} else {
-			$result = $langs->trans('WillBeReconciledWithStatement', $this->numReleve);
-			$autoaction = true;
-		}
-		
-		$societestatic = new Societe($db);
-		$userstatic = new User($db);
-		$chargestatic = new ChargeSociales($db);
-		$memberstatic = new Adherent($db);
-		
-		$links = $this->account->get_url($bankLine->id);
-		$relatedItem = '';
-		foreach($links as $key=>$val) {
-			if ($links[$key]['type'] == 'company') {
-				$societestatic->id = $links[$key]['url_id'];
-				$societestatic->name = $links[$key]['label'];
-				$relatedItem = $societestatic->getNomUrl(1,'',16);
-			} else if ($links[$key]['type'] == 'user') {
-				$userstatic->id = $links[$key]['url_id'];
-				$userstatic->lastname = $links[$key]['label'];
-				$relatedItem = $userstatic->getNomUrl(1,'');
-			} else if ($links[$key]['type'] == 'sc') {
-				// sc=old value
-				$chargestatic->id = $links[$key]['url_id'];
-				if (preg_match('/^\((.*)\)$/i',$links[$key]['label'],$reg)) {
-					if ($reg[1] == 'socialcontribution') $reg[1] = 'SocialContribution';
-					$chargestatic->lib = $langs->trans($reg[1]);
-				} else {
-					$chargestatic->lib = $links[$key]['label'];
-				}
-				$chargestatic->ref = $chargestatic->lib;
-				$relatedItem = $chargestatic->getNomUrl(1,16);
-			} else if ($links[$key]['type'] == 'member') {
-				$memberstatic->id = $links[$key]['url_id'];
-				$memberstatic->ref = $links[$key]['label'];
-				$relatedItem = $memberstatic->getNomUrl(1,16,'card');
-			}
-		}
-		
-		return array(
-			'id' => $bankLine->id
-			,'url' => $bankLine->getNomUrl(1)
-			,'date' => dol_print_date($bankLine->datev,"day")
-			,'label' => (preg_match('/^\((.*)\)$/i',$bankLine->label,$reg) ? $langs->trans($reg[1]) : dol_trunc($bankLine->label,60))
-			,'amount' => price($bankLine->amount)
-			,'result' => $result
-			,'autoaction' => $autoaction
-			,'relateditem' => $relatedItem
-			,'time' => $bankLine->datev
-		);
-	}
-	
 	/**
-	 * Actions made after file check by user
+	 * @var string Name of table without prefix where object is stored
 	 */
-	public function import_data($TLine) 
-	{
-		global $conf;
-		
-		$PDOdb = new TPDOdb;
-		
-		if (!empty($TLine['piece'])) 
-		{
-			dol_include_once('/compta/paiement/class/paiement.class.php');
-			dol_include_once('/fourn/class/paiementfourn.class.php');
-			dol_include_once('/fourn/class/fournisseur.facture.class.php');
-			dol_include_once('/compta/sociales/class/paymentsocialcontribution.class.php');
-			
-			/*
-			 * Reglemenent créé manuellement
-			 */
-			  	
-			$db = &$this->db;
-			foreach($TLine['piece'] as $iFileLine=>$TObject) 
-			{
-				if(!empty($TLine['fk_soc'][$iFileLine])) {
-					$l_societe = new Societe($db);
-					$l_societe->fetch($TLine['fk_soc'][$iFileLine]);
-				}
-				
-				$fk_payment = $TLine['fk_payment'][$iFileLine];
-				$date_paye = $this->TFile[$iFileLine]['datev'];
-				
-				foreach($TObject as $typeObject=>$TAmounts) 
-				{
-					if(!empty($TAmounts)) 
-					{
-						switch ($typeObject) 
-						{
-							case 'facture':
-								$fk_bank = $this->doPaymentForFacture($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye);
-								break;
-							case 'fournfacture':
-								$fk_bank = $this->doPaymentForFactureFourn($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye);
-								break;
-							case 'charge':
-								$fk_bank = $this->doPaymentForCharge();
-								break;
-							default:
-								continue;
-								break;
-						}
-						
-					}
-				}
-				
-			}
-			
-			unset($TLine['piece']);
-		}
-		
-		unset($TLine['fk_payment'], $TLine['fk_soc'], $TLine['type']);
-		
-	//	exit;
-	
-		if (isset($TLine['new'])) 
-		{
-			if(!empty($TLine['new'])) {
-				foreach($TLine['new'] as $iFileLine) {
-					$bankLineId = $this->create_bank_transaction($this->TFile[$iFileLine]);
-					if($bankLineId > 0) {
-						$bankLine = new AccountLine($this->db);
-						$bankLine->fetch($bankLineId);
-						$this->reconcile_bank_transaction($bankLine, $this->TFile[$iFileLine]);
-					}
-				}
-			}
-			unset($TLine['new']);
-		}
-		
-		foreach($TLine as $bankLineId => $iFileLine) 
-		{
-			$this->reconcile_bank_transaction($this->TBank[$bankLineId], $this->TFile[$iFileLine]);
-			if (!empty($conf->global->BANKIMPORT_HISTORY_IMPORT) && $bankLineId > 0)
-			{
-				$this->insertHistoryLine($PDOdb, $iFileLine, $bankLineId);
-			}
-		}
-	}
-
-	private function validateInvoices(&$TAmounts, $type) {
-		
-		global $db, $user;
-		
-		dol_include_once('/compta/facture/class/facture.class.php');
-		dol_include_once('/fourn/class/fournisseur.facture.class.php');
-		
-		$TTypeElement = array('payment'=>'Facture', 'payment_supplier'=>'FactureFournisseur');
-		
-		if(!empty($TAmounts) && in_array($type, array_keys($TTypeElement))) {
-			foreach($TAmounts as $facid=>$amount) {
-				$f = new $TTypeElement[$type]($db);
-				if($f->fetch($facid) > 0 && $f->statut == 0 && $amount > 0) $f->validate($user);
-			}
-		}
-		
-	}
-
-	private function doPaymentForFacture(&$TLine, &$TAmounts, &$l_societe, $iFileLine, $fk_payment, $date_paye)
-	{
-		return $this->doPayment($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye, 'payment');
-	}
-
-	private function doPaymentForFactureFourn(&$TLine, &$TAmounts, &$l_societe, $iFileLine, $fk_payment, $date_paye)
-	{
-		return $this->doPayment($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye, 'payment_supplier');
-	}
-	
-	private function doPaymentForCharge(&$TLine, &$TAmounts, &$l_societe, $iFileLine, $fk_payment, $date_paye)
-	{
-		return $this->doPayment($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye, 'payment_sc');
-	}
-
-	private function doPayment(&$TLine, &$TAmounts, &$l_societe, $iFileLine, $fk_payment, $date_paye, $type='payment')
-	{
-		global $conf, $langs,$user;
-		
-		$note = $langs->trans('TitleBankImport') .' - '.$this->numReleve;
-		
-		if ($type == 'payment') $paiement = new Paiement($this->db);
-		elseif ($type == 'payment_supplier') $paiement = new PaiementFourn($this->db);
-		elseif ($type == 'payment_supplier') $paiement = new PaymentSocialContribution($this->db);
-		else exit($langs->trans('BankImport_FatalError_PaymentType_NotPossible', $type));
-		
-		if(!empty($conf->global->BANKIMPORT_ALLOW_DRAFT_INVOICE)) $this->validateInvoices($TAmounts, $type);
-		
-	    $paiement->datepaye     = $date_paye;
-	    $paiement->amounts      = $TAmounts;   // Array with all payments dispatching
-	    $paiement->paiementid   = $fk_payment;
-	    $paiement->num_paiement = '';
-	    $paiement->note         = $note;
-		
-		$paiement_id = $paiement->create($user, 1);
-
-		if ($paiement_id > 0) 
-		{
-			$bankLineId = $paiement->addPaymentToBank($user, $type, !empty($this->TFile[$iFileLine]['label']) ? $this->TFile[$iFileLine]['label'] : $note, $this->account->id, $l_societe->name, '');
-			$TLine[$bankLineId] = $iFileLine;
-			
-			$bankLine = new AccountLine($this->db);
-			$bankLine->fetch($bankLineId);
-			$this->TBank[$bankLineId] = $bankLine;
-			
-			// On supprime le new saisi
-			foreach($TLine['new'] as $k=>$iFileLineNew) 
-			{
-				if($iFileLineNew == $iFileLine) unset($TLine['new'][$k]);
-			}
-			
-			// Uniquement pour les factures client (les acomptes fournisseur n'existent pas)
-			if($conf->global->BANKIMPORT_AUTO_CREATE_DISCOUNT && $type === 'payment') $this->createDiscount($TAmounts);
-			
-			return $bankLineId;
-		}
-		
-		return 0; // Payment fail, can't return bankLineId
-	}
-
-	private function createDiscount(&$TAmounts) {
-		
-		global $db, $user;
-		
-		dol_include_once('/core/class/discount.class.php');
-		
-		foreach($TAmounts as $id_fac => $amount) {
-			
-			$object = new Facture($db);
-			$object->fetch($id_fac);
-			if($object->type != 3) continue; // Uniquement les acomptes
-			
-			$object->fetch_thirdparty();
-			
-			// Check if there is already a discount (protection to avoid duplicate creation when resubmit post)
-			$discountcheck=new DiscountAbsolute($db);
-			$result=$discountcheck->fetch(0,$object->id);
-			
-			$canconvert=0;
-			if ($object->type == Facture::TYPE_DEPOSIT && $object->paye == 1 && empty($discountcheck->id)) $canconvert=1;	// we can convert deposit into discount if deposit is payed completely and not already converted (see real condition into condition used to show button converttoreduc)
-			if ($object->type == Facture::TYPE_CREDIT_NOTE && $object->paye == 0 && empty($discountcheck->id)) $canconvert=1;	// we can convert credit note into discount if credit note is not payed back and not already converted and amount of payment is 0 (see real condition into condition used to show button converttoreduc)
-			if ($canconvert)
-			{
-				$db->begin();
-			
-				// Boucle sur chaque taux de tva
-				$i = 0;
-				foreach ($object->lines as $line) {
-					$amount_ht [$line->tva_tx] += $line->total_ht;
-					$amount_tva [$line->tva_tx] += $line->total_tva;
-					$amount_ttc [$line->tva_tx] += $line->total_ttc;
-					$i ++;
-				}
-			
-				// Insert one discount by VAT rate category
-				$discount = new DiscountAbsolute($db);
-				if ($object->type == Facture::TYPE_CREDIT_NOTE)
-					$discount->description = '(CREDIT_NOTE)';
-				elseif ($object->type == Facture::TYPE_DEPOSIT)
-					$discount->description = '(DEPOSIT)';
-				else {
-					setEventMessage($langs->trans('CantConvertToReducAnInvoiceOfThisType'),'errors');
-				}
-				$discount->tva_tx = abs($object->total_ttc);
-				$discount->fk_soc = $object->socid;
-				$discount->fk_facture_source = $object->id;
-			
-				$error = 0;
-				foreach ($amount_ht as $tva_tx => $xxx) {
-					$discount->amount_ht = abs($amount_ht [$tva_tx]);
-					$discount->amount_tva = abs($amount_tva [$tva_tx]);
-					$discount->amount_ttc = abs($amount_ttc [$tva_tx]);
-					$discount->tva_tx = abs($tva_tx);
-			
-					$result = $discount->create($user);
-					if ($result < 0)
-					{
-						$error++;
-						break;
-					}
-				}
-			
-				if (empty($error))
-				{
-					// Classe facture
-					$result = $object->set_paid($user);
-					if ($result >= 0)
-					{
-						//$mesgs[]='OK'.$discount->id;
-						$db->commit();
-					}
-					else
-					{
-						setEventMessage($object->error,'errors');
-						$db->rollback();
-					}
-				}
-				else
-				{
-					setEventMessage($discount->error,'errors');
-					$db->rollback();
-				}
-			}
-
-		}
-
-	}
-
-	private function insertHistoryLine(&$PDOdb, $iFileLine, $fk_bank)
-	{
-		if (!empty($this->hasHeader) && !empty($this->TOriginLine[$iFileLine]))
-		{
-			$header = $this->parseHeader($this->lineHeader);
-			$line = $this->parseLine($this->TOriginLine[$iFileLine]);
-			
-			$historyLine = new TBankImportHistory;
-			
-			$historyLine->num_releve = $this->numReleve;
-			$historyLine->fk_bank = $fk_bank;
-			$historyLine->line_imported_title = $header;
-			$historyLine->line_imported_value = $line;
-			
-			$historyLine->save($PDOdb);
-		}
-	}
-	
-	public function parseHeader($headerToParse)
-	{
-		global $conf;
-		
-		$header = explode($conf->global->BANKIMPORT_SEPARATOR, $headerToParse);
-		$header = array_map(array('BankImport', 'cleanString'), $header);
-		
-		return $header;
-	}
-	
-	public static function cleanString($strToClean)
-	{
-		require_once DOL_DOCUMENT_ROOT.'/core/lib/functions.lib.php';
-		$strToClean = trim($strToClean);
-		$strToClean = preg_replace('/\s{2,}/', '', $strToClean);
-		$strToClean = dol_strtolower(dol_string_unaccent($strToClean));
-		
-		return ucfirst($strToClean);
-	}
-	
-	public function parseLine($lineArrayToParse)
-	{
-		$line = array_map(array('BankImport', 'cleanStringForLine'), $lineArrayToParse);
-		
-		return $line;
-	}
-	
-	public static function cleanStringForLine($strToClean)
-	{
-		$strToClean = trim($strToClean);
-		$strToClean = preg_replace('/\s{2,}/', '', $strToClean);
-		
-		return $strToClean;
-	}
-	
-	private function create_bank_transaction($fileLine) {
-		global $user;
-		
-		$bankLineId = $this->account->addline($fileLine['datev'], 'PRE', $fileLine['label'], $fileLine['amount'], '', '', $user);
-		$this->nbCreated++;
-		
-		return $bankLineId;
-	}
-	
-	private function reconcile_bank_transaction($bankLine, $fileLine) {
-		global $user,$conf;
-		
-		// Set conciliation
-		$bankLine->num_releve = $this->numReleve;
-		$bankLine->update_conciliation($user, 0);
-		
-		// Update value date
-		$dateDiff = ($fileLine['datev'] - strtotime($bankLine->datev)) / 24 / 3600;
-		$bankLine->datev_change($bankLine->id, $dateDiff);
-		
-		$this->nbReconciled++;
-	}
+	public $table_element = 'bankstatement_bankstatement';
 
 	/**
-	 * Extract negative direction token from direction key
+	 * @var int  Does bankstatement support multicompany module ? 0=No test on entity, 1=Test with field entity, 2=Test with link by societe
+	 */
+	public $ismultientitymanaged = 0;
+
+	/**
+	 * @var int  Does bankstatement support extrafields ? 0=No, 1=Yes
+	 */
+	public $isextrafieldmanaged = 1;
+
+	/**
+	 * @var string String with name of icon for bankstatement. Must be the part after the 'object_' into object_bankstatement.png
+	 */
+	public $picto = 'bankstatement@bankstatement';
+
+
+	const STATUS_DRAFT = 0;
+	const STATUS_VALIDATED = 1;
+	const STATUS_CANCELED = 9;
+
+
+	/**
+	 *  'type' if the field format ('integer', 'integer:ObjectClass:PathToClass[:AddCreateButtonOrNot[:Filter]]', 'varchar(x)', 'double(24,8)', 'real', 'price', 'text', 'html', 'date', 'datetime', 'timestamp', 'duration', 'mail', 'phone', 'url', 'password')
+	 *         Note: Filter can be a string like "(t.ref:like:'SO-%') or (t.date_creation:<:'20160101') or (t.nature:is:NULL)"
+	 *  'label' the translation key.
+	 *  'enabled' is a condition when the field must be managed.
+	 *  'position' is the sort order of field.
+	 *  'notnull' is set to 1 if not null in database. Set to -1 if we must set data to null if empty ('' or 0).
+	 *  'visible' says if field is visible in list (Examples: 0=Not visible, 1=Visible on list and create/update/view forms, 2=Visible on list only, 3=Visible on create/update/view form only (not list), 4=Visible on list and update/view form only (not create). 5=Visible on list and view only (not create/not update). Using a negative value means field is not shown by default on list but can be selected for viewing)
+	 *  'noteditable' says if field is not editable (1 or 0)
+	 *  'default' is a default value for creation (can still be overwrote by the Setup of Default Values if field is editable in creation form). Note: If default is set to '(PROV)' and field is 'ref', the default value will be set to '(PROVid)' where id is rowid when a new record is created.
+	 *  'index' if we want an index in database.
+	 *  'foreignkey'=>'tablename.field' if the field is a foreign key (it is recommanded to name the field fk_...).
+	 *  'searchall' is 1 if we want to search in this field when making a search from the quick search button.
+	 *  'isameasure' must be set to 1 if you want to have a total on list for this field. Field type must be summable like integer or double(24,8).
+	 *  'css' is the CSS style to use on field. For example: 'maxwidth200'
+	 *  'help' is a string visible as a tooltip on field
+	 *  'showoncombobox' if value of the field must be visible into the label of the combobox that list record
+	 *  'disabled' is 1 if we want to have the field locked by a 'disabled' attribute. In most cases, this is never set into the definition of $fields into class, but is set dynamically by some part of code.
+	 *  'arraykeyval' to set list of value if type is a list of predefined values. For example: array("0"=>"Draft","1"=>"Active","-1"=>"Cancel")
+	 *  'comment' is not used. You can store here any text of your choice. It is not used by application.
 	 *
-	 * @param array $matches Regex matches
-	 * @return string Last separator (Effectively removing the extracted negative direction)
+	 *  Note: To have value dynamic, you can set value to 0 in definition and edit the value on the fly into the constructor.
 	 */
-	private function extractNegDir(array $matches) {
-		$this->neg_dir = $matches[1];
-		return substr($matches[0], -1);
+
+	// BEGIN MODULEBUILDER PROPERTIES
+	/**
+	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
+	 */
+	public $fields=array(
+		'rowid'             => array('type'=>'integer',      'label'=>'TechnicalID',      'enabled'=>1, 'position'=>1,    'notnull'=>1,  'visible'=> 1, 'noteditable'=>'1', 'index'=>1, 'comment'=>"Id"),
+		'ref'               => array('type'=>'varchar(128)', 'label'=>'Ref',              'enabled'=>1, 'position'=>10,   'notnull'=>1,  'visible'=> 1, 'noteditable'=>'1', 'default'=>'(PROV)', 'index'=>1, 'searchall'=>1, 'showoncombobox'=>'1', 'comment'=>"Reference"),
+		'label'             => array('type'=>'varchar(128)', 'label'=>'Label',            'enabled'=>1, 'position'=>11,   'notnull'=>0,  'visible'=> 1, 'searchall'=>1,),
+		'status'            => array('type'=>'integer',      'label'=>'Status',           'enabled'=>1, 'position'=>12,   'notnull'=>1,  'visible'=> 1, 'arrayofkeyval'=>array('0'=>'Unreconciled', '1'=>'Reconciled'),),
+		'date_start'        => array('type'=>'date',         'label'=>'DateStart',        'enabled'=>1, 'position'=>20,   'notnull'=>0,  'visible'=> 1,),
+		'date_end'          => array('type'=>'date',         'label'=>'DateEnd',          'enabled'=>1, 'position'=>21,   'notnull'=>0,  'visible'=> 1,),
+		'tms'               => array('type'=>'timestamp',    'label'=>'DateModification', 'enabled'=>1, 'position'=>501,  'notnull'=>0,  'visible'=> 1,),
+		'fk_user_import'    => array('type'=>'integer',      'label'=>'UserImport',       'enabled'=>1, 'position'=>502,  'notnull'=>0,  'visible'=> 1, 'foreignkey'=>'user.rowid',),
+		'date_import'       => array('type'=>'date',         'label'=>'DateImport',       'enabled'=>1, 'position'=>503,  'notnull'=>0,  'visible'=> 1,),
+		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',    'enabled'=>1, 'position'=>504,  'notnull'=>0,  'visible'=> 1, 'foreignkey'=>'user.rowid',),
+		'date_reconcile'    => array('type'=>'date',         'label'=>'DateReconcile',    'enabled'=>1, 'position'=>505,  'notnull'=>0,  'visible'=> 1,),
+		'import_key'        => array('type'=>'varchar(14)',  'label'=>'ImportId',         'enabled'=>1, 'position'=>1000, 'notnull'=>-1, 'visible'=> 1,),
+	);
+	public $rowid;
+	public $ref;
+	public $tms;
+	public $import_key;
+	public $label;
+	public $fk_user_import;
+	public $date_import;
+	public $fk_user_reconcile;
+	public $date_reconcile;
+	public $date_start;
+	public $date_end;
+	public $status;
+	// END MODULEBUILDER PROPERTIES
+
+
+	// If this object has a subtable with lines
+
+	/**
+	 * @var int    Name of subtable line
+	 */
+	public $table_element_line = 'bankstatement_line';
+
+	/**
+	 * @var int    Field with ID of parent key if this field has a parent
+	 */
+	//public $fk_element = 'fk_bankstatement';
+
+	/**
+	 * @var int    Name of subtable class that manage subtable lines
+	 */
+	//public $class_element_line = 'BankStatementline';
+
+	/**
+	 * @var array	List of child tables. To test if we can delete object.
+	 */
+	//protected $childtables=array();
+
+	/**
+	 * @var array	List of child tables. To know object to delete on cascade.
+	 */
+	//protected $childtablesoncascade=array('bankstatement_bankstatementdet');
+
+	/**
+	 * @var BankStatementLine[]     Array of subtable lines
+	 */
+	//public $lines = array();
+
+
+
+	/**
+	 * Constructor
+	 *
+	 * @param DoliDb $db Database handler
+	 */
+	public function __construct(DoliDB $db)
+	{
+		global $conf, $langs;
+
+		$this->db = $db;
+
+		if (empty($conf->global->MAIN_SHOW_TECHNICAL_ID) && isset($this->fields['rowid'])) $this->fields['rowid']['visible'] = 0;
+		if (empty($conf->multicompany->enabled) && isset($this->fields['entity'])) $this->fields['entity']['enabled'] = 0;
+
+		// Example to show how to set values of fields definition dynamically
+		/*if ($user->rights->bankstatement->bankstatement->read) {
+			$this->fields['myfield']['visible'] = 1;
+			$this->fields['myfield']['noteditable'] = 0;
+		}*/
+
+		// Unset fields that are disabled
+		foreach ($this->fields as $key => $val)
+		{
+			if (isset($val['enabled']) && empty($val['enabled']))
+			{
+				unset($this->fields[$key]);
+			}
+		}
+
+		// Translate some data of arrayofkeyval
+		if (is_object($langs))
+		{
+			foreach($this->fields as $key => $val)
+			{
+				if (is_array($val['arrayofkeyval']))
+				{
+					foreach($val['arrayofkeyval'] as $key2 => $val2)
+					{
+						$this->fields[$key]['arrayofkeyval'][$key2]=$langs->trans($val2);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Create object into database
+	 *
+	 * @param  User $user      User that creates
+	 * @param  bool $notrigger false=launch triggers after, true=disable triggers
+	 * @return int             <0 if KO, Id of created object if OK
+	 */
+	public function create(User $user, $notrigger = false)
+	{
+		return $this->createCommon($user, $notrigger);
+	}
+
+	/**
+	 * Clone an object into another one
+	 *
+	 * @param  	User 	$user      	User that creates
+	 * @param  	int 	$fromid     Id of object to clone
+	 * @return 	mixed 				New object created, <0 if KO
+	 */
+	public function createFromClone(User $user, $fromid)
+	{
+		global $langs, $extrafields;
+	    $error = 0;
+
+	    dol_syslog(__METHOD__, LOG_DEBUG);
+
+	    $object = new self($this->db);
+
+	    $this->db->begin();
+
+	    // Load source object
+	    $result = $object->fetchCommon($fromid);
+	    if ($result > 0 && !empty($object->table_element_line)) $object->fetchLines();
+
+	    // get lines so they will be clone
+	    //foreach($this->lines as $line)
+	    //	$line->fetch_optionals();
+
+	    // Reset some properties
+	    unset($object->id);
+	    unset($object->fk_user_creat);
+	    unset($object->import_key);
+
+
+	    // Clear fields
+	    $object->ref = empty($this->fields['ref']['default']) ? "copy_of_".$object->ref : $this->fields['ref']['default'];
+	    $object->label = empty($this->fields['label']['default']) ? $langs->trans("CopyOf")." ".$object->label : $this->fields['label']['default'];
+	    $object->status = self::STATUS_DRAFT;
+	    // ...
+	    // Clear extrafields that are unique
+	    if (is_array($object->array_options) && count($object->array_options) > 0)
+	    {
+	    	$extrafields->fetch_name_optionals_label($this->table_element);
+	    	foreach ($object->array_options as $key => $option)
+	    	{
+	    		$shortkey = preg_replace('/options_/', '', $key);
+	    		if (!empty($extrafields->attributes[$this->element]['unique'][$shortkey]))
+	    		{
+	    			//var_dump($key); var_dump($clonedObj->array_options[$key]); exit;
+	    			unset($object->array_options[$key]);
+	    		}
+	    	}
+	    }
+
+	    // Create clone
+		$object->context['createfromclone'] = 'createfromclone';
+	    $result = $object->createCommon($user);
+	    if ($result < 0) {
+	        $error++;
+	        $this->error = $object->error;
+	        $this->errors = $object->errors;
+	    }
+
+	    if (!$error)
+	    {
+	    	// copy internal contacts
+	    	if ($this->copy_linked_contact($object, 'internal') < 0)
+	    	{
+	    		$error++;
+	    	}
+	    }
+
+	    if (!$error)
+	    {
+	    	// copy external contacts if same company
+	    	if (property_exists($this, 'socid') && $this->socid == $object->socid)
+	    	{
+	    		if ($this->copy_linked_contact($object, 'external') < 0)
+	    			$error++;
+	    	}
+	    }
+
+	    unset($object->context['createfromclone']);
+
+	    // End
+	    if (!$error) {
+	        $this->db->commit();
+	        return $object;
+	    } else {
+	        $this->db->rollback();
+	        return -1;
+	    }
+	}
+
+	/**
+	 * Load object in memory from the database
+	 *
+	 * @param int    $id   Id object
+	 * @param string $ref  Ref
+	 * @return int         <0 if KO, 0 if not found, >0 if OK
+	 */
+	public function fetch($id, $ref = null)
+	{
+		$result = $this->fetchCommon($id, $ref);
+		if ($result > 0 && !empty($this->table_element_line)) $this->fetchLines();
+		return $result;
+	}
+
+	/**
+	 * Load object lines in memory from the database
+	 *
+	 * @return int         <0 if KO, 0 if not found, >0 if OK
+	 */
+	public function fetchLines()
+	{
+		$this->lines = array();
+
+		$result = $this->fetchLinesCommon();
+		return $result;
+	}
+
+
+	/**
+	 * Load list of objects in memory from the database.
+	 *
+	 * @param  string      $sortorder    Sort Order
+	 * @param  string      $sortfield    Sort field
+	 * @param  int         $limit        limit
+	 * @param  int         $offset       Offset
+	 * @param  array       $filter       Filter array. Example array('field'=>'valueforlike', 'customurl'=>...)
+	 * @param  string      $filtermode   Filter mode (AND or OR)
+	 * @return array|int                 int <0 if KO, array of pages if OK
+	 */
+	public function fetchAll($sortorder = '', $sortfield = '', $limit = 0, $offset = 0, array $filter = array(), $filtermode = 'AND')
+	{
+		global $conf;
+
+		dol_syslog(__METHOD__, LOG_DEBUG);
+
+		$records = array();
+
+		$sql = 'SELECT ';
+		$sql .= $this->getFieldList();
+		$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.' as t';
+		if (isset($this->ismultientitymanaged) && $this->ismultientitymanaged == 1) $sql .= ' WHERE t.entity IN ('.getEntity($this->table_element).')';
+		else $sql .= ' WHERE 1 = 1';
+		// Manage filter
+		$sqlwhere = array();
+		if (count($filter) > 0) {
+			foreach ($filter as $key => $value) {
+				if ($key == 't.rowid') {
+					$sqlwhere[] = $key.'='.$value;
+				}
+				elseif (strpos($key, 'date') !== false) {
+					$sqlwhere[] = $key.' = \''.$this->db->idate($value).'\'';
+				}
+				elseif ($key == 'customsql') {
+					$sqlwhere[] = $value;
+				}
+				else {
+					$sqlwhere[] = $key.' LIKE \'%'.$this->db->escape($value).'%\'';
+				}
+			}
+		}
+		if (count($sqlwhere) > 0) {
+			$sql .= ' AND ('.implode(' '.$filtermode.' ', $sqlwhere).')';
+		}
+
+		if (!empty($sortfield)) {
+			$sql .= $this->db->order($sortfield, $sortorder);
+		}
+		if (!empty($limit)) {
+			$sql .= ' '.$this->db->plimit($limit, $offset);
+		}
+
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			$num = $this->db->num_rows($resql);
+            $i = 0;
+			while ($i < min($limit, $num))
+			{
+			    $obj = $this->db->fetch_object($resql);
+
+				$record = new self($this->db);
+				$record->setVarsFromFetchObj($obj);
+
+				$records[$record->id] = $record;
+
+				$i++;
+			}
+			$this->db->free($resql);
+
+			return $records;
+		} else {
+			$this->errors[] = 'Error '.$this->db->lasterror();
+			dol_syslog(__METHOD__.' '.join(',', $this->errors), LOG_ERR);
+
+			return -1;
+		}
+	}
+
+	/**
+	 * Update object into database
+	 *
+	 * @param  User $user      User that modifies
+	 * @param  bool $notrigger false=launch triggers after, true=disable triggers
+	 * @return int             <0 if KO, >0 if OK
+	 */
+	public function update(User $user, $notrigger = false)
+	{
+		return $this->updateCommon($user, $notrigger);
+	}
+
+	/**
+	 * Delete object in database
+	 *
+	 * @param User $user       User that deletes
+	 * @param bool $notrigger  false=launch triggers after, true=disable triggers
+	 * @return int             <0 if KO, >0 if OK
+	 */
+	public function delete(User $user, $notrigger = false)
+	{
+		return $this->deleteCommon($user, $notrigger);
+		//return $this->deleteCommon($user, $notrigger, 1);
+	}
+
+	/**
+	 *  Delete a line of object in database
+	 *
+	 *	@param  User	$user       User that delete
+	 *  @param	int		$idline		Id of line to delete
+	 *  @param 	bool 	$notrigger  false=launch triggers after, true=disable triggers
+	 *  @return int         		>0 if OK, <0 if KO
+	 */
+	public function deleteLine(User $user, $idline, $notrigger = false)
+	{
+		if ($this->status < 0)
+		{
+			$this->error = 'ErrorDeleteLineNotAllowedByObjectStatus';
+			return -2;
+		}
+
+		return $this->deleteLineCommon($user, $idline, $notrigger);
+	}
+
+
+	/**
+	 *	Validate object
+	 *
+	 *	@param		User	$user     		User making status change
+	 *  @param		int		$notrigger		1=Does not execute triggers, 0= execute triggers
+	 *	@return  	int						<=0 if OK, 0=Nothing done, >0 if KO
+	 */
+	public function validate($user, $notrigger = 0)
+	{
+		global $conf, $langs;
+
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
+
+		$error = 0;
+
+		// Protection
+		if ($this->status == self::STATUS_VALIDATED)
+		{
+			dol_syslog(get_class($this)."::validate action abandonned: already validated", LOG_WARNING);
+			return 0;
+		}
+
+		/*if (! ((empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->create))
+		 || (! empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->bankstatement_advance->validate))))
+		 {
+		 $this->error='NotEnoughPermissions';
+		 dol_syslog(get_class($this)."::valid ".$this->error, LOG_ERR);
+		 return -1;
+		 }*/
+
+		$now = dol_now();
+
+		$this->db->begin();
+
+		// Define new ref
+		if (!$error && (preg_match('/^[\(]?PROV/i', $this->ref) || empty($this->ref))) // empty should not happened, but when it occurs, the test save life
+		{
+			$num = $this->getNextNumRef();
+		}
+		else
+		{
+			$num = $this->ref;
+		}
+		$this->newref = $num;
+
+		// Validate
+		$sql = "UPDATE ".MAIN_DB_PREFIX.$this->table_element;
+		$sql .= " SET ref = '".$this->db->escape($num)."',";
+		$sql .= " status = ".self::STATUS_VALIDATED.",";
+		$sql .= " date_validation = '".$this->db->idate($now)."',";
+		$sql .= " fk_user_valid = ".$user->id;
+		$sql .= " WHERE rowid = ".$this->id;
+
+		dol_syslog(get_class($this)."::validate()", LOG_DEBUG);
+		$resql = $this->db->query($sql);
+		if (!$resql)
+		{
+			dol_print_error($this->db);
+			$this->error = $this->db->lasterror();
+			$error++;
+		}
+
+		if (!$error && !$notrigger)
+		{
+			// Call trigger
+			$result = $this->call_trigger('BANKSTATEMENT_VALIDATE', $user);
+			if ($result < 0) $error++;
+			// End call triggers
+		}
+
+		if (!$error)
+		{
+			$this->oldref = $this->ref;
+
+			// Rename directory if dir was a temporary ref
+			if (preg_match('/^[\(]?PROV/i', $this->ref))
+			{
+				// Now we rename also files into index
+				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filename = CONCAT('".$this->db->escape($this->newref)."', SUBSTR(filename, ".(strlen($this->ref) + 1).")), filepath = 'bankstatement/".$this->db->escape($this->newref)."'";
+				$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%' AND filepath = 'bankstatement/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
+				$resql = $this->db->query($sql);
+				if (!$resql) { $error++; $this->error = $this->db->lasterror(); }
+
+				// We rename directory ($this->ref = old ref, $num = new ref) in order not to lose the attachments
+				$oldref = dol_sanitizeFileName($this->ref);
+				$newref = dol_sanitizeFileName($num);
+				$dirsource = $conf->bankstatement->dir_output.'/bankstatement/'.$oldref;
+				$dirdest = $conf->bankstatement->dir_output.'/bankstatement/'.$newref;
+				if (!$error && file_exists($dirsource))
+				{
+					dol_syslog(get_class($this)."::validate() rename dir ".$dirsource." into ".$dirdest);
+
+					if (@rename($dirsource, $dirdest))
+					{
+						dol_syslog("Rename ok");
+						// Rename docs starting with $oldref with $newref
+						$listoffiles = dol_dir_list($conf->bankstatement->dir_output.'/bankstatement/'.$newref, 'files', 1, '^'.preg_quote($oldref, '/'));
+						foreach ($listoffiles as $fileentry)
+						{
+							$dirsource = $fileentry['name'];
+							$dirdest = preg_replace('/^'.preg_quote($oldref, '/').'/', $newref, $dirsource);
+							$dirsource = $fileentry['path'].'/'.$dirsource;
+							$dirdest = $fileentry['path'].'/'.$dirdest;
+							@rename($dirsource, $dirdest);
+						}
+					}
+				}
+			}
+		}
+
+		// Set new ref and current status
+		if (!$error)
+		{
+			$this->ref = $num;
+			$this->status = self::STATUS_VALIDATED;
+		}
+
+		if (!$error)
+		{
+			$this->db->commit();
+			return 1;
+		}
+		else
+		{
+			$this->db->rollback();
+			return -1;
+		}
+	}
+
+
+	/**
+	 *	Set draft status
+	 *
+	 *	@param	User	$user			Object user that modify
+	 *  @param	int		$notrigger		1=Does not execute triggers, 0=Execute triggers
+	 *	@return	int						<0 if KO, >0 if OK
+	 */
+	public function setDraft($user, $notrigger = 0)
+	{
+		// Protection
+		if ($this->status <= self::STATUS_DRAFT)
+		{
+			return 0;
+		}
+
+		/*if (! ((empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->write))
+		 || (! empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->bankstatement_advance->validate))))
+		 {
+		 $this->error='Permission denied';
+		 return -1;
+		 }*/
+
+		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'BANKSTATEMENT_UNVALIDATE');
+	}
+
+	/**
+	 *	Set cancel status
+	 *
+	 *	@param	User	$user			Object user that modify
+	 *  @param	int		$notrigger		1=Does not execute triggers, 0=Execute triggers
+	 *	@return	int						<0 if KO, 0=Nothing done, >0 if OK
+	 */
+	public function cancel($user, $notrigger = 0)
+	{
+		// Protection
+		if ($this->status != self::STATUS_VALIDATED)
+		{
+			return 0;
+		}
+
+		/*if (! ((empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->write))
+		 || (! empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->bankstatement_advance->validate))))
+		 {
+		 $this->error='Permission denied';
+		 return -1;
+		 }*/
+
+		return $this->setStatusCommon($user, self::STATUS_CANCELED, $notrigger, 'BANKSTATEMENT_CLOSE');
+	}
+
+	/**
+	 *	Set back to validated status
+	 *
+	 *	@param	User	$user			Object user that modify
+	 *  @param	int		$notrigger		1=Does not execute triggers, 0=Execute triggers
+	 *	@return	int						<0 if KO, 0=Nothing done, >0 if OK
+	 */
+	public function reopen($user, $notrigger = 0)
+	{
+		// Protection
+		if ($this->status != self::STATUS_CANCELED)
+		{
+			return 0;
+		}
+
+		/*if (! ((empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->write))
+		 || (! empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->bankstatement_advance->validate))))
+		 {
+		 $this->error='Permission denied';
+		 return -1;
+		 }*/
+
+		return $this->setStatusCommon($user, self::STATUS_VALIDATED, $notrigger, 'BANKSTATEMENT_REOPEN');
+	}
+
+    /**
+     *  Return a link to the object card (with optionaly the picto)
+     *
+     *  @param  int     $withpicto                  Include picto in link (0=No picto, 1=Include picto into link, 2=Only picto)
+     *  @param  string  $option                     On what the link point to ('nolink', ...)
+     *  @param  int     $notooltip                  1=Disable tooltip
+     *  @param  string  $morecss                    Add more css on link
+     *  @param  int     $save_lastsearch_value      -1=Auto, 0=No save of lastsearch_values when clicking, 1=Save lastsearch_values whenclicking
+     *  @return	string                              String with URL
+     */
+    public function getNomUrl($withpicto = 0, $option = '', $notooltip = 0, $morecss = '', $save_lastsearch_value = -1)
+    {
+        global $conf, $langs, $hookmanager;
+
+        if (!empty($conf->dol_no_mouse_hover)) $notooltip = 1; // Force disable tooltips
+
+        $result = '';
+
+        $label = '<u>'.$langs->trans("BankStatement").'</u>';
+        $label .= '<br>';
+        $label .= '<b>'.$langs->trans('Ref').':</b> '.$this->ref;
+
+        $url = dol_buildpath('/bankstatement/bankstatement_card.php', 1).'?id='.$this->id;
+
+        if ($option != 'nolink')
+        {
+            // Add param to save lastsearch_values or not
+            $add_save_lastsearch_values = ($save_lastsearch_value == 1 ? 1 : 0);
+            if ($save_lastsearch_value == -1 && preg_match('/list\.php/', $_SERVER["PHP_SELF"])) $add_save_lastsearch_values = 1;
+            if ($add_save_lastsearch_values) $url .= '&save_lastsearch_values=1';
+        }
+
+        $linkclose = '';
+        if (empty($notooltip))
+        {
+            if (!empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER))
+            {
+                $label = $langs->trans("ShowBankStatement");
+                $linkclose .= ' alt="'.dol_escape_htmltag($label, 1).'"';
+            }
+            $linkclose .= ' title="'.dol_escape_htmltag($label, 1).'"';
+            $linkclose .= ' class="classfortooltip'.($morecss ? ' '.$morecss : '').'"';
+        }
+        else $linkclose = ($morecss ? ' class="'.$morecss.'"' : '');
+
+		$linkstart = '<a href="'.$url.'"';
+		$linkstart .= $linkclose.'>';
+		$linkend = '</a>';
+
+		$result .= $linkstart;
+		if ($withpicto) $result .= img_object(($notooltip ? '' : $label), ($this->picto ? $this->picto : 'generic'), ($notooltip ? (($withpicto != 2) ? 'class="paddingright"' : '') : 'class="'.(($withpicto != 2) ? 'paddingright ' : '').'classfortooltip"'), 0, 0, $notooltip ? 0 : 1);
+		if ($withpicto != 2) $result .= $this->ref;
+		$result .= $linkend;
+		//if ($withpicto != 2) $result.=(($addlabel && $this->label) ? $sep . dol_trunc($this->label, ($addlabel > 1 ? $addlabel : 0)) : '');
+
+		global $action, $hookmanager;
+		$hookmanager->initHooks(array('bankstatementdao'));
+		$parameters = array('id'=>$this->id, 'getnomurl'=>$result);
+		$reshook = $hookmanager->executeHooks('getNomUrl', $parameters, $this, $action); // Note that $action and $object may have been modified by some hooks
+		if ($reshook > 0) $result = $hookmanager->resPrint;
+		else $result .= $hookmanager->resPrint;
+
+		return $result;
+    }
+
+	/**
+	 *  Return label of the status
+	 *
+	 *  @param  int		$mode          0=long label, 1=short label, 2=Picto + short label, 3=Picto, 4=Picto + long label, 5=Short label + Picto, 6=Long label + Picto
+	 *  @return	string 			       Label of status
+	 */
+	public function getLibStatut($mode = 0)
+	{
+		return $this->LibStatut($this->status, $mode);
+	}
+
+    // phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps
+	/**
+	 *  Return the status
+	 *
+	 *  @param	int		$status        Id status
+	 *  @param  int		$mode          0=long label, 1=short label, 2=Picto + short label, 3=Picto, 4=Picto + long label, 5=Short label + Picto, 6=Long label + Picto
+	 *  @return string 			       Label of status
+	 */
+	public function LibStatut($status, $mode = 0)
+	{
+		// phpcs:enable
+		if (empty($this->labelStatus) || empty($this->labelStatusShort))
+		{
+			global $langs;
+			//$langs->load("bankstatement");
+			$this->labelStatus[self::STATUS_DRAFT] = $langs->trans('Draft');
+			$this->labelStatus[self::STATUS_VALIDATED] = $langs->trans('Enabled');
+			$this->labelStatus[self::STATUS_CANCELED] = $langs->trans('Disabled');
+			$this->labelStatusShort[self::STATUS_DRAFT] = $langs->trans('Draft');
+			$this->labelStatusShort[self::STATUS_VALIDATED] = $langs->trans('Enabled');
+			$this->labelStatusShort[self::STATUS_CANCELED] = $langs->trans('Disabled');
+		}
+
+		$statusType = 'status'.$status;
+		//if ($status == self::STATUS_VALIDATED) $statusType = 'status1';
+		if ($status == self::STATUS_CANCELED) $statusType = 'status6';
+
+		return dolGetStatus($this->labelStatus[$status], $this->labelStatusShort[$status], '', $statusType, $mode);
+	}
+
+	/**
+	 *	Load the info information in the object
+	 *
+	 *	@param  int		$id       Id of object
+	 *	@return	void
+	 */
+	public function info($id)
+	{
+		$sql = 'SELECT rowid, date_creation as datec, tms as datem,';
+		$sql .= ' fk_user_creat, fk_user_modif';
+		$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.' as t';
+		$sql .= ' WHERE t.rowid = '.$id;
+		$result = $this->db->query($sql);
+		if ($result)
+		{
+			if ($this->db->num_rows($result))
+			{
+				$obj = $this->db->fetch_object($result);
+				$this->id = $obj->rowid;
+				if ($obj->fk_user_author)
+				{
+					$cuser = new User($this->db);
+					$cuser->fetch($obj->fk_user_author);
+					$this->user_creation = $cuser;
+				}
+
+				if ($obj->fk_user_valid)
+				{
+					$vuser = new User($this->db);
+					$vuser->fetch($obj->fk_user_valid);
+					$this->user_validation = $vuser;
+				}
+
+				if ($obj->fk_user_cloture)
+				{
+					$cluser = new User($this->db);
+					$cluser->fetch($obj->fk_user_cloture);
+					$this->user_cloture = $cluser;
+				}
+
+				$this->date_creation     = $this->db->jdate($obj->datec);
+				$this->date_modification = $this->db->jdate($obj->datem);
+				$this->date_validation   = $this->db->jdate($obj->datev);
+			}
+
+			$this->db->free($result);
+		}
+		else
+		{
+			dol_print_error($this->db);
+		}
+	}
+
+	/**
+	 * Initialise object with example values
+	 * Id must be 0 if object instance is a specimen
+	 *
+	 * @return void
+	 */
+	public function initAsSpecimen()
+	{
+		$this->initAsSpecimenCommon();
+	}
+
+	/**
+	 * 	Create an array of lines
+	 *
+	 * 	@return array|int		array of lines if OK, <0 if KO
+	 */
+	public function getLinesArray()
+	{
+	    $this->lines = array();
+
+	    $objectline = new BankStatementLine($this->db);
+	    $result = $objectline->fetchAll('ASC', 'position', 0, 0, array('customsql'=>'fk_bankstatement = '.$this->id));
+
+	    if (is_numeric($result))
+	    {
+	        $this->error = $this->error;
+	        $this->errors = $this->errors;
+	        return $result;
+	    }
+	    else
+	    {
+	        $this->lines = $result;
+	        return $this->lines;
+	    }
+	}
+
+	/**
+	 *  Returns the reference to the following non used object depending on the active numbering module.
+	 *
+	 *  @return string      		Object free reference
+	 */
+	public function getNextNumRef()
+	{
+		global $langs, $conf;
+		$langs->load("bankstatement@bankstatement");
+
+		if (empty($conf->global->BANKSTATEMENT_BANKSTATEMENT_ADDON)) {
+			$conf->global->BANKSTATEMENT_BANKSTATEMENT_ADDON = 'mod_mymobject_standard';
+		}
+
+		if (!empty($conf->global->BANKSTATEMENT_BANKSTATEMENT_ADDON))
+		{
+			$mybool = false;
+
+			$file = $conf->global->BANKSTATEMENT_BANKSTATEMENT_ADDON.".php";
+			$classname = $conf->global->BANKSTATEMENT_BANKSTATEMENT_ADDON;
+
+			// Include file with class
+			$dirmodels = array_merge(array('/'), (array) $conf->modules_parts['models']);
+			foreach ($dirmodels as $reldir)
+			{
+				$dir = dol_buildpath($reldir."core/modules/bankstatement/");
+
+				// Load file with numbering class (if found)
+				$mybool |= @include_once $dir.$file;
+			}
+
+			if ($mybool === false)
+			{
+				dol_print_error('', "Failed to include file ".$file);
+				return '';
+			}
+
+			$obj = new $classname();
+			$numref = $obj->getNextValue($this);
+
+			if ($numref != "")
+			{
+				return $numref;
+			}
+			else
+			{
+				$this->error = $obj->error;
+				//dol_print_error($this->db,get_class($this)."::getNextNumRef ".$obj->error);
+				return "";
+			}
+		}
+		else
+		{
+			print $langs->trans("Error")." ".$langs->trans("Error_BANKSTATEMENT_BANKSTATEMENT_ADDON_NotDefined");
+			return "";
+		}
+	}
+
+	/**
+	 *  Create a document onto disk according to template module.
+	 *
+	 *  @param	    string		$modele			Force template to use ('' to not force)
+	 *  @param		Translate	$outputlangs	objet lang a utiliser pour traduction
+	 *  @param      int			$hidedetails    Hide details of lines
+	 *  @param      int			$hidedesc       Hide description
+	 *  @param      int			$hideref        Hide ref
+	 *  @param      null|array  $moreparams     Array to provide more information
+	 *  @return     int         				0 if KO, 1 if OK
+	 */
+	public function generateDocument($modele, $outputlangs, $hidedetails = 0, $hidedesc = 0, $hideref = 0, $moreparams = null)
+	{
+		global $conf, $langs;
+
+		$langs->load("bankstatement@bankstatement");
+
+		if (!dol_strlen($modele)) {
+			$modele = 'standard';
+
+			if ($this->modelpdf) {
+				$modele = $this->modelpdf;
+			} elseif (!empty($conf->global->BANKSTATEMENT_ADDON_PDF)) {
+				$modele = $conf->global->BANKSTATEMENT_ADDON_PDF;
+			}
+		}
+
+		$modelpath = "core/modules/bankstatement/doc/";
+
+		return $this->commonGenerateDocument($modelpath, $modele, $outputlangs, $hidedetails, $hidedesc, $hideref, $moreparams);
+	}
+
+	/**
+	 * Action executed by scheduler
+	 * CAN BE A CRON TASK. In such a case, parameters come from the schedule job setup field 'Parameters'
+	 *
+	 * @return	int			0 if OK, <>0 if KO (this function is used also by cron so only 0 is OK)
+	 */
+	//public function doScheduledJob($param1, $param2, ...)
+	public function doScheduledJob()
+	{
+		global $conf, $langs;
+
+		//$conf->global->SYSLOG_FILE = 'DOL_DATA_ROOT/dolibarr_mydedicatedlofile.log';
+
+		$error = 0;
+		$this->output = '';
+		$this->error = '';
+
+		dol_syslog(__METHOD__, LOG_DEBUG);
+
+		$now = dol_now();
+
+		$this->db->begin();
+
+		// ...
+
+		$this->db->commit();
+
+		return $error;
 	}
 }
 
-
-class TBankImportHistory extends TObjetStd
+/**
+ * Class BankStatementLine. You can also remove this and generate a CRUD class for lines objects.
+ */
+class BankStatementLine
 {
-	function __construct() 
-	{
-		$this->set_table( MAIN_DB_PREFIX.'bankimport_history' );
-    	 
-		$this->add_champs('num_releve',array('type'=>'varchar','length'=>50,'index'=>true));
-		$this->add_champs('fk_bank',array('type'=>'integer','index'=>true));
-        $this->add_champs('line_imported_title,line_imported_value', array('type'=>'array'));
-        
-        $this->_init_vars();
-        
-	    $this->start();
-	}
-	
+	// To complete with content of an object BankStatementLine
+	// We should have a field rowid, fk_bankstatement and position
 }

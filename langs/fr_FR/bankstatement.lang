@@ -32,6 +32,10 @@ BankStatementSetupPage = Ici, vous pouvez configurer le module Import de relevé
 ValueSaved = Valeur enregistrée
 Settings = Réglages
 
+# Module rights
+ImportAndReconcileBankStatements=Importer et rapprocher des relevés de banque
+
+# Module configuration
 BANKSTATEMENT_SEPARATOR=Séparateur des données du fichier
 BANKSTATEMENT_MAPPING=Colonnes du fichier CSV
 BANKSTATEMENT_DATE_FORMAT=Format de date du fichier CSV
@@ -58,4 +62,18 @@ BANKSTATEMENT_AUTO_CREATE_DISCOUNT_Help=
 BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL_Help=
 BANKSTATEMENT_ALLOW_FREELINES_Help=
 
+# Setup errors
 ErrorInputDoesNotMatchPattern=Non sauvegardé : saisie non conforme au format demandé.
+
+# BankStatement Object
+BankStatement=Relevé de banque
+Unreconciled=Non rapproché
+Reconciled=Rapproché
+UserImport=Utilisateur ayant réalisé l’import
+DateImport=Date d’import
+UserReconcile=Utilisateur ayant réalisé le rapprochement
+DateReconcile=Date du rapprochement
+DateStart=Date
+
+# Card
+FileToImport=Fichier à importer

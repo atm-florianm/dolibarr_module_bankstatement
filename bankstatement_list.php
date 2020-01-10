@@ -92,7 +92,7 @@ $pageprev = $page - 1;
 $pagenext = $page + 1;
 
 // Initialize technical objects
-$object = new bankstatement($db);
+$object = new BankStatement($db);
 $extrafields = new ExtraFields($db);
 $diroutputmassaction = $conf->bankstatement->dir_output.'/temp/massgeneration/'.$user->id;
 $hookmanager->initHooks(array('bankstatementlist')); // Note that conf->hooks_modules contains array
@@ -195,8 +195,8 @@ if (empty($reshook))
 	}
 
 	// Mass actions
-	$objectclass = 'bankstatement';
-	$objectlabel = 'bankstatement';
+	$objectclass = 'BankStatement';
+	$objectlabel = 'BankStatement';
 	$uploaddir = $conf->bankstatement->dir_output;
 	include DOL_DOCUMENT_ROOT.'/core/actions_massactions.inc.php';
 }
@@ -211,9 +211,9 @@ $form = new Form($db);
 
 $now = dol_now();
 
-//$help_url="EN:Module_bankstatement|FR:Module_bankstatement_FR|ES:Módulo_bankstatement";
+//$help_url="EN:Module_BankStatement|FR:Module_BankStatement_FR|ES:Módulo_BankStatement";
 $help_url = '';
-$title = $langs->trans('ListOf', $langs->transnoentitiesnoconv("bankstatements"));
+$title = $langs->trans('ListOf', $langs->transnoentitiesnoconv("BankStatements"));
 
 
 // Build and execute select
@@ -370,9 +370,9 @@ $newcardbutton = dolGetButtonTitle($langs->trans('New'), '', 'fa fa-plus-circle'
 print_barre_liste($title, $page, $_SERVER["PHP_SELF"], $param, $sortfield, $sortorder, $massactionbutton, $num, $nbtotalofrecords, 'title_companies', 0, $newcardbutton, '', $limit);
 
 // Add code for pre mass action (confirmation or email presend form)
-$topicmail = "SendbankstatementRef";
+$topicmail = "SendBankStatementRef";
 $modelmail = "bankstatement";
-$objecttmp = new bankstatement($db);
+$objecttmp = new BankStatement($db);
 $trackid = 'xxxx'.$object->id;
 include DOL_DOCUMENT_ROOT.'/core/tpl/massactions_pre.tpl.php';
 

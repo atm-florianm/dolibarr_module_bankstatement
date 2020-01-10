@@ -26,9 +26,7 @@ for ($resInclude = 0, $depth = 0; !$resInclude && $depth < $MAX_BACKTRACK; $dept
 if (!$resInclude) die ('Unable to include main.inc.php');
 
 require_once 'class/bankstatement.class.php';
-
-dol_include_once('/bankimport/class/bankimport.class.php');
-dol_include_once('/compta/facture/class/facture.class.php');
+require_once DOL_DOCUMENT_ROOT . '/compta/facture/class/facture.class.php';
 
 global $db, $langs;
 
@@ -40,7 +38,7 @@ $mesg = "";
 $form = new Form($db);
 $tpl = 'tpl/bankimport.new.tpl.php';
 
-$import = new BankImport($db);
+$import = new BankStatement($db);
 
 if(GETPOST('compare')) {
 	
