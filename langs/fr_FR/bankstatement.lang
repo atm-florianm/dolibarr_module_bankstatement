@@ -28,7 +28,7 @@ LeftMenuBankStatement=Import de relevés de banque
 
 # Setup
 BankStatementSetup = Configuration du module Import de relevés de banque
-BankStatementSetupPage = Ici, vous pouvez configurer le module Import de relevés de banque. N’oubliez pas de sauvegarder vos modifications.
+BankStatementSetupPage = Ici, vous pouvez configurer le module Import de relevés de banque. N’oubliez pas de sauvegarder chacune de vos modifications.
 ValueSaved = Valeur enregistrée
 Settings = Réglages
 
@@ -62,8 +62,15 @@ BANKSTATEMENT_AUTO_CREATE_DISCOUNT_Help=
 BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL_Help=
 BANKSTATEMENT_ALLOW_FREELINES_Help=
 
+Tabulation=Tabulation (\t)
+Comma=Virgule (,)
+Colon=Deux-points (:)
+Pipe=Barre verticale (|)
+
+
 # Setup errors
-ErrorInputDoesNotMatchPattern=Non sauvegardé : saisie non conforme au format demandé.
+ErrorInputDoesNotMatchPattern=Non sauvegardé : votre saisie ne correspond pas au format attendu.
+ErrorFieldRequired=Ce champ est obligatoire.
 
 # BankStatement Object
 BankStatement=Relevé de banque

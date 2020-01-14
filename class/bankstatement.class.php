@@ -1,6 +1,6 @@
 <?php
 /* Copyright (C) 2017  Laurent Destailleur <eldy@users.sourceforge.net>
- * Copyright (C) ---Put here your own copyright and developer email---
+ * Copyright (C) 2020  ATM Consulting <support@atm-consulting.fr>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@
 
 // Put here all includes required by your class file
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
+require_once 'bankstatementline.class.php';
+dol_include_once('/bankstatement/core/modules/bankstatement/mod_bankstatement_standard.php');
 //require_once DOL_DOCUMENT_ROOT . '/societe/class/societe.class.php';
 //require_once DOL_DOCUMENT_ROOT . '/product/class/product.class.php';
 
@@ -92,24 +94,27 @@ class BankStatement extends CommonObject
 	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
 	 */
 	public $fields=array(
-		'rowid'             => array('type'=>'integer',      'label'=>'TechnicalID',      'enabled'=>1, 'position'=>1,    'notnull'=>1,  'visible'=> 1, 'noteditable'=>'1', 'index'=>1, 'comment'=>"Id"),
-		'ref'               => array('type'=>'varchar(128)', 'label'=>'Ref',              'enabled'=>1, 'position'=>10,   'notnull'=>1,  'visible'=> 1, 'noteditable'=>'1', 'default'=>'(PROV)', 'index'=>1, 'searchall'=>1, 'showoncombobox'=>'1', 'comment'=>"Reference"),
+		'rowid'             => array('type'=>'integer',      'label'=>'TechnicalID',      'enabled'=>1, 'position'=>1,    'notnull'=>1,  'visible'=> 0, 'noteditable'=>1, 'index'=>1, 'comment'=>"Id"),
+		'ref'               => array('type'=>'varchar(128)', 'label'=>'Ref',              'enabled'=>1, 'position'=>10,   'notnull'=>1,  'visible'=> 4, 'noteditable'=>1, 'default'=>'(PROV)', 'index'=>1, 'searchall'=>1, 'showoncombobox'=>'1', 'comment'=>"Reference"),
 		'label'             => array('type'=>'varchar(128)', 'label'=>'Label',            'enabled'=>1, 'position'=>11,   'notnull'=>0,  'visible'=> 1, 'searchall'=>1,),
-		'status'            => array('type'=>'integer',      'label'=>'Status',           'enabled'=>1, 'position'=>12,   'notnull'=>1,  'visible'=> 1, 'arrayofkeyval'=>array('0'=>'Unreconciled', '1'=>'Reconciled'),),
-		'date_start'        => array('type'=>'date',         'label'=>'DateStart',        'enabled'=>1, 'position'=>20,   'notnull'=>0,  'visible'=> 1,),
-		'date_end'          => array('type'=>'date',         'label'=>'DateEnd',          'enabled'=>1, 'position'=>21,   'notnull'=>0,  'visible'=> 1,),
-		'tms'               => array('type'=>'timestamp',    'label'=>'DateModification', 'enabled'=>1, 'position'=>501,  'notnull'=>0,  'visible'=> 1,),
-		'fk_user_import'    => array('type'=>'integer',      'label'=>'UserImport',       'enabled'=>1, 'position'=>502,  'notnull'=>0,  'visible'=> 1, 'foreignkey'=>'user.rowid',),
-		'date_import'       => array('type'=>'date',         'label'=>'DateImport',       'enabled'=>1, 'position'=>503,  'notnull'=>0,  'visible'=> 1,),
-		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',    'enabled'=>1, 'position'=>504,  'notnull'=>0,  'visible'=> 1, 'foreignkey'=>'user.rowid',),
-		'date_reconcile'    => array('type'=>'date',         'label'=>'DateReconcile',    'enabled'=>1, 'position'=>505,  'notnull'=>0,  'visible'=> 1,),
-		'import_key'        => array('type'=>'varchar(14)',  'label'=>'ImportId',         'enabled'=>1, 'position'=>1000, 'notnull'=>-1, 'visible'=> 1,),
+		'status'            => array('type'=>'integer',      'label'=>'Status',           'enabled'=>1, 'position'=>12,   'notnull'=>1,  'visible'=> 4, 'noteditable'=>1, 'arrayofkeyval'=>array('0'=>'Unreconciled', '1'=>'Reconciled'),),
+		'fk_account'        => array('type'=>'integer',      'label'=>'Account',          'enabled'=>1, 'position'=>13,   'notnull'=>1,  'visible'=> 1, 'foreignkey'=>'bank_account.rowid',),
+		'date_start'        => array('type'=>'date',         'label'=>'DateStart',        'enabled'=>1, 'position'=>20,   'notnull'=>0,  'visible'=> -4,),
+		'date_end'          => array('type'=>'date',         'label'=>'DateEnd',          'enabled'=>1, 'position'=>21,   'notnull'=>0,  'visible'=> -4,),
+		'tms'               => array('type'=>'timestamp',    'label'=>'DateModification', 'enabled'=>1, 'position'=>501,  'notnull'=>0,  'visible'=> 0,),
+		'fk_user_import'    => array('type'=>'integer',      'label'=>'UserImport',       'enabled'=>1, 'position'=>502,  'notnull'=>0,  'visible'=> 0, 'foreignkey'=>'user.rowid',),
+		'date_import'       => array('type'=>'date',         'label'=>'DateImport',       'enabled'=>1, 'position'=>503,  'notnull'=>0,  'visible'=> 0, 'noteditable'=>1),
+		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',    'enabled'=>1, 'position'=>504,  'notnull'=>0,  'visible'=> 0, 'foreignkey'=>'user.rowid',),
+		'date_reconcile'    => array('type'=>'date',         'label'=>'DateReconcile',    'enabled'=>1, 'position'=>505,  'notnull'=>0,  'visible'=> 4,),
+		'import_key'        => array('type'=>'varchar(14)',  'label'=>'ImportId',         'enabled'=>1, 'position'=>1000, 'notnull'=>-1, 'visible'=> 0,),
+		'entity'            => array('type'=>'integer',      'label'=>'Entity',           'enabled'=>1, 'position'=>1000, 'notnull'=>0,  'visible'=> 0, 'foreignkey'=>'entity.rowid',),
 	);
 	public $rowid;
 	public $ref;
 	public $tms;
 	public $import_key;
 	public $label;
+	public $fk_account;
 	public $fk_user_import;
 	public $date_import;
 	public $fk_user_reconcile;
@@ -117,6 +122,7 @@ class BankStatement extends CommonObject
 	public $date_start;
 	public $date_end;
 	public $status;
+	public $entity;
 	// END MODULEBUILDER PROPERTIES
 
 
@@ -150,8 +156,10 @@ class BankStatement extends CommonObject
 	/**
 	 * @var BankStatementLine[]     Array of subtable lines
 	 */
-	//public $lines = array();
+	public $lines = array();
 
+	/** @var BankStatementFormat $CSVFormat */
+	public $CSVFormat;
 
 
 	/**
@@ -164,6 +172,15 @@ class BankStatement extends CommonObject
 		global $conf, $langs;
 
 		$this->db = $db;
+
+		$this->CSVFormat = new BankStatementFormat(
+			$conf->global->BANKSTATEMENT_MAPPING,
+			$conf->global->BANKSTATEMENT_DATE_FORMAT,
+			'"',
+			$conf->global->BANKSTATEMENT_SEPARATOR,
+			isset($conf->global->BANKSTATEMENT_MAC_COMPATIBILITY) ? "\r" : "\n",
+			false
+		);
 
 		if (empty($conf->global->MAIN_SHOW_TECHNICAL_ID) && isset($this->fields['rowid'])) $this->fields['rowid']['visible'] = 0;
 		if (empty($conf->multicompany->enabled) && isset($this->fields['entity'])) $this->fields['entity']['enabled'] = 0;
@@ -211,6 +228,76 @@ class BankStatement extends CommonObject
 		return $this->createCommon($user, $notrigger);
 	}
 
+	public function createFromCSVFile($filePath, $fk_account)
+	{
+		/*
+		TODO: gérer formats particuliers :
+		 * - format mac (les "\n" sont remplacés par des "\r") => il suffit de faire le remplacement inverse
+		 *      tester avec samples/mac-sample.csv
+		 * - format "direction" : au lieu d’avoir une colonne débit et une colonne crédit, on a une colonne
+		 *   "montant" et une colonne "direction" : la colonne direction indique si c’est un débit ou un
+		 *   crédit
+		 *      tester avec samples/direction-sample.csv
+		 * - format "direction" simple (facile) : une colonne "montant" avec un montant positif ou négatif
+		 *      tester avec samples/???
+		 * - format "colonnes" : ce n’est même pas un format CSV (ou plutôt c’est comme un CSV renversé)
+		 *      tester avec samples/colonnes-sample.csv
+		 *
+		 * Dans l’ancien module, le format Mac est spécifié par une conf.
+		 * Le format "direction" et le format "colonnes" sont gérés en ajoutant des indications ésotériques
+		 * non documentées (?) au mapping.
+		 *
+		 * Je pense qu’à terme, il faudrait gérer chacun de ces 3 formats spéciaux avec une conf séparée
+		 * et pouvoir enregistrer des profils de configuration (associables à des comptes)
+		 *
+		*/
+		global $conf, $user;
+		if (!is_file($filePath)) {
+			return false;
+		}
+
+		$this->fk_account = $fk_account;
+
+		$this->ref = $this->getNextNumRef();
+
+		if ($this->create($user))
+			var_dump(sprintf('created with ID %d', $this->id));
+		else {
+			var_dump('Not created');
+		}
+
+		/** @var BankStatementLine[] $TBankStatementLine */
+		$TBankStatementLine = array();
+		$TBankStatementInvalidLine = array();
+
+		// Actual loading of the CSV file
+		$csvFile = fopen($filePath, 'r');
+
+		while (!feof($csvFile)) {
+			$dataRow = fgetcsv($csvFile, 4096, $this->CSVFormat->separator, $this->CSVFormat->enclosure);
+			if (empty($dataRow)) continue;
+			$line = new BankStatementLine($this->db);
+			$line->CSVFormat = $this->CSVFormat;
+
+			$line->fk_bankstatement = $this->id;
+
+			if (count($dataRow) !== count($this->CSVFormat->mapping)) {
+				$line->error = 'CSVRowFormatMismatch';
+				continue;
+			}
+			$line->setValuesFromCSVRow($dataRow);
+			if ($line->error) {
+				$TBankStatementInvalidLine[] = $line;
+			} else {
+				$TBankStatementLine[] = $line;
+			}
+			var_dump($line->getFieldValues(), $line->id);
+			$line->create($user);
+		}
+
+		return true;
+	}
+
 	/**
 	 * Clone an object into another one
 	 *
@@ -221,86 +308,86 @@ class BankStatement extends CommonObject
 	public function createFromClone(User $user, $fromid)
 	{
 		global $langs, $extrafields;
-	    $error = 0;
+		$error = 0;
 
-	    dol_syslog(__METHOD__, LOG_DEBUG);
+		dol_syslog(__METHOD__, LOG_DEBUG);
 
-	    $object = new self($this->db);
+		$object = new self($this->db);
 
-	    $this->db->begin();
+		$this->db->begin();
 
-	    // Load source object
-	    $result = $object->fetchCommon($fromid);
-	    if ($result > 0 && !empty($object->table_element_line)) $object->fetchLines();
+		// Load source object
+		$result = $object->fetchCommon($fromid);
+		if ($result > 0 && !empty($object->table_element_line)) $object->fetchLines();
 
-	    // get lines so they will be clone
-	    //foreach($this->lines as $line)
-	    //	$line->fetch_optionals();
+		// get lines so they will be clone
+		//foreach($this->lines as $line)
+		//	$line->fetch_optionals();
 
-	    // Reset some properties
-	    unset($object->id);
-	    unset($object->fk_user_creat);
-	    unset($object->import_key);
+		// Reset some properties
+		unset($object->id);
+		unset($object->fk_user_creat);
+		unset($object->import_key);
 
 
-	    // Clear fields
-	    $object->ref = empty($this->fields['ref']['default']) ? "copy_of_".$object->ref : $this->fields['ref']['default'];
-	    $object->label = empty($this->fields['label']['default']) ? $langs->trans("CopyOf")." ".$object->label : $this->fields['label']['default'];
-	    $object->status = self::STATUS_DRAFT;
-	    // ...
-	    // Clear extrafields that are unique
-	    if (is_array($object->array_options) && count($object->array_options) > 0)
-	    {
-	    	$extrafields->fetch_name_optionals_label($this->table_element);
-	    	foreach ($object->array_options as $key => $option)
-	    	{
-	    		$shortkey = preg_replace('/options_/', '', $key);
-	    		if (!empty($extrafields->attributes[$this->element]['unique'][$shortkey]))
-	    		{
-	    			//var_dump($key); var_dump($clonedObj->array_options[$key]); exit;
-	    			unset($object->array_options[$key]);
-	    		}
-	    	}
-	    }
+		// Clear fields
+		$object->ref = empty($this->fields['ref']['default']) ? "copy_of_".$object->ref : $this->fields['ref']['default'];
+		$object->label = empty($this->fields['label']['default']) ? $langs->trans("CopyOf")." ".$object->label : $this->fields['label']['default'];
+		$object->status = self::STATUS_DRAFT;
+		// ...
+		// Clear extrafields that are unique
+		if (is_array($object->array_options) && count($object->array_options) > 0)
+		{
+			$extrafields->fetch_name_optionals_label($this->table_element);
+			foreach ($object->array_options as $key => $option)
+			{
+				$shortkey = preg_replace('/options_/', '', $key);
+				if (!empty($extrafields->attributes[$this->element]['unique'][$shortkey]))
+				{
+					//var_dump($key); var_dump($clonedObj->array_options[$key]); exit;
+					unset($object->array_options[$key]);
+				}
+			}
+		}
 
-	    // Create clone
+		// Create clone
 		$object->context['createfromclone'] = 'createfromclone';
-	    $result = $object->createCommon($user);
-	    if ($result < 0) {
-	        $error++;
-	        $this->error = $object->error;
-	        $this->errors = $object->errors;
-	    }
+		$result = $object->createCommon($user);
+		if ($result < 0) {
+			$error++;
+			$this->error = $object->error;
+			$this->errors = $object->errors;
+		}
 
-	    if (!$error)
-	    {
-	    	// copy internal contacts
-	    	if ($this->copy_linked_contact($object, 'internal') < 0)
-	    	{
-	    		$error++;
-	    	}
-	    }
+		if (!$error)
+		{
+			// copy internal contacts
+			if ($this->copy_linked_contact($object, 'internal') < 0)
+			{
+				$error++;
+			}
+		}
 
-	    if (!$error)
-	    {
-	    	// copy external contacts if same company
-	    	if (property_exists($this, 'socid') && $this->socid == $object->socid)
-	    	{
-	    		if ($this->copy_linked_contact($object, 'external') < 0)
-	    			$error++;
-	    	}
-	    }
+		if (!$error)
+		{
+			// copy external contacts if same company
+			if (property_exists($this, 'socid') && $this->socid == $object->socid)
+			{
+				if ($this->copy_linked_contact($object, 'external') < 0)
+					$error++;
+			}
+		}
 
-	    unset($object->context['createfromclone']);
+		unset($object->context['createfromclone']);
 
-	    // End
-	    if (!$error) {
-	        $this->db->commit();
-	        return $object;
-	    } else {
-	        $this->db->rollback();
-	        return -1;
-	    }
+		// End
+		if (!$error) {
+			$this->db->commit();
+			return $object;
+		} else {
+			$this->db->rollback();
+			return -1;
+		}
 	}
 
 	/**
@@ -387,10 +474,10 @@ class BankStatement extends CommonObject
 		$resql = $this->db->query($sql);
 		if ($resql) {
 			$num = $this->db->num_rows($resql);
-            $i = 0;
+			$i = 0;
 			while ($i < min($limit, $num))
 			{
-			    $obj = $this->db->fetch_object($resql);
+				$obj = $this->db->fetch_object($resql);
 
 				$record = new self($this->db);
 				$record->setVarsFromFetchObj($obj);
@@ -660,50 +747,50 @@ class BankStatement extends CommonObject
 		return $this->setStatusCommon($user, self::STATUS_VALIDATED, $notrigger, 'BANKSTATEMENT_REOPEN');
 	}
 
-    /**
-     *  Return a link to the object card (with optionaly the picto)
-     *
-     *  @param  int     $withpicto                  Include picto in link (0=No picto, 1=Include picto into link, 2=Only picto)
-     *  @param  string  $option                     On what the link point to ('nolink', ...)
-     *  @param  int     $notooltip                  1=Disable tooltip
-     *  @param  string  $morecss                    Add more css on link
-     *  @param  int     $save_lastsearch_value      -1=Auto, 0=No save of lastsearch_values when clicking, 1=Save lastsearch_values whenclicking
-     *  @return	string                              String with URL
-     */
-    public function getNomUrl($withpicto = 0, $option = '', $notooltip = 0, $morecss = '', $save_lastsearch_value = -1)
-    {
-        global $conf, $langs, $hookmanager;
+	/**
+	 *  Return a link to the object card (with optionaly the picto)
+	 *
+	 *  @param  int     $withpicto                  Include picto in link (0=No picto, 1=Include picto into link, 2=Only picto)
+	 *  @param  string  $option                     On what the link point to ('nolink', ...)
+	 *  @param  int     $notooltip                  1=Disable tooltip
+	 *  @param  string  $morecss                    Add more css on link
+	 *  @param  int     $save_lastsearch_value      -1=Auto, 0=No save of lastsearch_values when clicking, 1=Save lastsearch_values whenclicking
+	 *  @return	string                              String with URL
+	 */
+	public function getNomUrl($withpicto = 0, $option = '', $notooltip = 0, $morecss = '', $save_lastsearch_value = -1)
+	{
+		global $conf, $langs, $hookmanager;
 
-        if (!empty($conf->dol_no_mouse_hover)) $notooltip = 1; // Force disable tooltips
+		if (!empty($conf->dol_no_mouse_hover)) $notooltip = 1; // Force disable tooltips
 
-        $result = '';
+		$result = '';
 
-        $label = '<u>'.$langs->trans("BankStatement").'</u>';
-        $label .= '<br>';
-        $label .= '<b>'.$langs->trans('Ref').':</b> '.$this->ref;
+		$label = '<u>'.$langs->trans("BankStatement").'</u>';
+		$label .= '<br>';
+		$label .= '<b>'.$langs->trans('Ref').':</b> '.$this->ref;
 
-        $url = dol_buildpath('/bankstatement/bankstatement_card.php', 1).'?id='.$this->id;
+		$url = dol_buildpath('/bankstatement/bankstatement_card.php', 1).'?id='.$this->id;
 
-        if ($option != 'nolink')
-        {
-            // Add param to save lastsearch_values or not
-            $add_save_lastsearch_values = ($save_lastsearch_value == 1 ? 1 : 0);
-            if ($save_lastsearch_value == -1 && preg_match('/list\.php/', $_SERVER["PHP_SELF"])) $add_save_lastsearch_values = 1;
-            if ($add_save_lastsearch_values) $url .= '&save_lastsearch_values=1';
-        }
+		if ($option != 'nolink')
+		{
+			// Add param to save lastsearch_values or not
+			$add_save_lastsearch_values = ($save_lastsearch_value == 1 ? 1 : 0);
+			if ($save_lastsearch_value == -1 && preg_match('/list\.php/', $_SERVER["PHP_SELF"])) $add_save_lastsearch_values = 1;
+			if ($add_save_lastsearch_values) $url .= '&save_lastsearch_values=1';
+		}
 
-        $linkclose = '';
-        if (empty($notooltip))
-        {
-            if (!empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER))
-            {
-                $label = $langs->trans("ShowBankStatement");
-                $linkclose .= ' alt="'.dol_escape_htmltag($label, 1).'"';
-            }
-            $linkclose .= ' title="'.dol_escape_htmltag($label, 1).'"';
-            $linkclose .= ' class="classfortooltip'.($morecss ? ' '.$morecss : '').'"';
-        }
-        else $linkclose = ($morecss ? ' class="'.$morecss.'"' : '');
+		$linkclose = '';
+		if (empty($notooltip))
+		{
+			if (!empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER))
+			{
+				$label = $langs->trans("ShowBankStatement");
+				$linkclose .= ' alt="'.dol_escape_htmltag($label, 1).'"';
+			}
+			$linkclose .= ' title="'.dol_escape_htmltag($label, 1).'"';
+			$linkclose .= ' class="classfortooltip'.($morecss ? ' '.$morecss : '').'"';
+		}
+		else $linkclose = ($morecss ? ' class="'.$morecss.'"' : '');
 
 		$linkstart = '<a href="'.$url.'"';
 		$linkstart .= $linkclose.'>';
@@ -723,7 +810,7 @@ class BankStatement extends CommonObject
 		else $result .= $hookmanager->resPrint;
 
 		return $result;
-    }
+	}
 
 	/**
 	 *  Return label of the status
@@ -736,7 +823,7 @@ class BankStatement extends CommonObject
 		return $this->LibStatut($this->status, $mode);
 	}
 
-    // phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps
+	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps
 	/**
 	 *  Return the status
 	 *
@@ -837,22 +924,19 @@ class BankStatement extends CommonObject
 	 */
 	public function getLinesArray()
 	{
-	    $this->lines = array();
+		$this->lines = array();
 
-	    $objectline = new BankStatementLine($this->db);
-	    $result = $objectline->fetchAll('ASC', 'position', 0, 0, array('customsql'=>'fk_bankstatement = '.$this->id));
+		$objectline = new BankStatementLine($this->db, $this->CSVFormat);
+		$result = $objectline->fetchAll('ASC', 'date', 0, 0, array('customsql'=>'fk_bankstatement = '.$this->id));
 
-	    if (is_numeric($result))
-	    {
-	        $this->error = $this->error;
-	        $this->errors = $this->errors;
-	        return $result;
-	    }
-	    else
-	    {
-	        $this->lines = $result;
-	        return $this->lines;
-	    }
+		if (is_numeric($result)) {
+//			$this->error = $this->error;
+//			$this->errors = $this->errors;
+			return $result;
+		} else {
+			$this->lines = $result;
+			return $this->lines;
+		}
 	}
 
 	/**
@@ -866,7 +950,7 @@ class BankStatement extends CommonObject
 		$langs->load("bankstatement@bankstatement");
 
 		if (empty($conf->global->BANKSTATEMENT_BANKSTATEMENT_ADDON)) {
-			$conf->global->BANKSTATEMENT_BANKSTATEMENT_ADDON = 'mod_mymobject_standard';
+			$conf->global->BANKSTATEMENT_BANKSTATEMENT_ADDON = 'mod_bankstatement_standard';
 		}
 
 		if (!empty($conf->global->BANKSTATEMENT_BANKSTATEMENT_ADDON))
@@ -974,13 +1058,71 @@ class BankStatement extends CommonObject
 
 		return $error;
 	}
+
+	/**
+	 * Overrides CommonObject::showInputField;
+	 * Return HTML string to put an input field into a page
+	 * Code very similar with showInputField of extra fields
+	 *
+	 * @param  array   		$val	       Array of properties for field to show
+	 * @param  string  		$key           Field key (name)
+	 * @param  string  		$value         Preselected value to show (for date type it must be in timestamp format, for amount or price it must be a php numeric value)
+	 * @param  string  		$moreparam     To add more parameters on html input tag
+	 * @param  string  		$keysuffix     Prefix string to add into name and id of field (can be used to avoid duplicate names)
+	 * @param  string  		$keyprefix     Suffix string to add into name and id of field (can be used to avoid duplicate names)
+	 * @param  string|int	$morecss       Value for css to define style/length of field. May also be a numeric.
+	 * @return string
+	 */
+	public function showInputField($val, $key, $value, $moreparam = '', $keysuffix = '', $keyprefix = '', $morecss = 0)
+	{
+		switch($key)
+		{
+			case 'fk_account':
+				$form = new Form($this->db);
+				$form->select_comptes(-1, 'fk_account', 0, 'courant <> 2', 1, 'required');
+				// the empty select should have empty value or the 'required' attribute will be useless
+				echo '<script>$("#selectfk_account option[value=-1]").attr("value", "")</script>';
+				return '';
+			case 'status':
+				return '';
+			default:
+				return parent::showInputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss);
+		}
+	}
+
+	public function showOutputField($val, $key, $value, $moreparam = '', $keysuffix = '', $keyprefix = '', $morecss = '')
+	{
+		switch($key)
+		{
+			case 'fk_account':
+				$account = new Account($this->db);
+				$account->fetch($this->fk_account);
+				return $account->getNomUrl(1, '', 'reflabel');
+			default:
+				return parent::showOutputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss);
+		}
+	}
 }
 
 /**
- * Class BankStatementLine. You can also remove this and generate a CRUD class for lines objects.
+ * Simple data class for holding details of a CSV format variant (like the column separator etc.)
+ * Class BankStatementFormat
  */
-class BankStatementLine
+class BankStatementFormat
 {
-	// To complete with content of an object BankStatementLine
-	// We should have a field rowid, fk_bankstatement and position
+	public $mapping    = 'date;label;credit;debit';
+	public $dateFormat = 'Y-m-d';
+	public $enclosure  = '"';
+	public $separator  = ';';
+	public $lineEnding = "\n";
+	public $columnMode = false;
+	public function __construct($mapping, $dateFormat, $enclosure, $separator, $lineEnding, $columnMode)
+	{
+		$this->mapping    = explode(';', $mapping);
+		$this->dateFormat = $dateFormat;
+		$this->enclosure  = $enclosure;
+		$this->separator  = $separator;
+		$this->lineEnding = $lineEnding;
+		$this->columnMode = $columnMode;
+	}
 }

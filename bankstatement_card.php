@@ -48,6 +48,7 @@ if (!$res) die("Include of main fails");
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formfile.class.php';
 dol_include_once('/bankstatement/class/bankstatement.class.php');
+dol_include_once('/bankstatement/lib/bankstatement.lib.php');
 dol_include_once('/bankstatement/lib/bankstatement_bankstatement.lib.php');
 
 // Load translation files required by the page
@@ -139,15 +140,6 @@ if (empty($reshook))
     // Action to build doc
     include DOL_DOCUMENT_ROOT.'/core/actions_builddoc.inc.php';
 
-    if ($action == 'set_thirdparty' && $permissiontoadd)
-    {
-    	$object->setValueFrom('fk_soc', GETPOST('fk_soc', 'int'), '', '', 'date', '', $user, 'BANKSTATEMENT_MODIFY');
-    }
-    if ($action == 'classin' && $permissiontoadd)
-    {
-    	$object->setProject(GETPOST('projectid', 'int'));
-    }
-
     // Actions to send emails
     $triggersendname = 'BANKSTATEMENT_SENTBYMAIL';
     $autocopy = 'MAIN_MAIL_AUTOCOPY_BANKSTATEMENT_TO';
@@ -177,11 +169,10 @@ $(()=>{
 </script>';
 
 
-// Part to create
-if ($action == 'create')
-{
+// action 'create' = display the creation form
+if ($action == 'create') {
 	print load_fiche_titre($langs->trans("NewObject", $langs->transnoentitiesnoconv("BankStatement")));
-	print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">';
+	print '<form method="POST" enctype="multipart/form-data" action="'.$_SERVER["PHP_SELF"].'">';
 	print '<input type="hidden" name="token" value="'.newToken().'">';
 	print '<input type="hidden" name="action" value="add">';
 	if ($backtopage) print '<input type="hidden" name="backtopage" value="'.$backtopage.'">';
@@ -200,12 +191,8 @@ if ($action == 'create')
 	?>
 	<tbody>
 	<tr>
-		<td><?php echo $langs->trans('FileToImport'); ?></td>
-		<td><input id="CSVFile" name="CSVFile" type="file"/></td>
-	</tr>
-	<tr>
-		<td></td>
-		<td></td>
+		<td><label for="CSVFile"><?php echo $langs->trans('FileToImport'); ?></label></td>
+		<td><input id="CSVFile" name="CSVFile" type="file" required /></td>
 	</tr>
 	</tbody>
 	<?php
@@ -213,15 +200,25 @@ if ($action == 'create')
 
 	dol_fiche_end();
 
-	print '<div class="center">';
-	print '<input type="submit" class="button" name="add" value="'.dol_escape_htmltag($langs->trans("Create")).'">';
-	print '&nbsp; ';
-	print '<input type="'.($backtopage ? "submit" : "button").'" class="button" name="cancel" value="'.dol_escape_htmltag($langs->trans("Cancel")).'"'.($backtopage ? '' : ' onclick="javascript:history.go(-1)"').'>'; // Cancel for create does not post form if we don't know the backtopage
 	print '</div>';
+	print '<div class="center">'
+		  . '<input type="submit" class="button" name="save" value="'.$langs->trans("Save").'" />'
+		  . '&nbsp;'
+		  // Cancel for create does not post form if we don't know the backtopage
+		  . '<input type="'.($backtopage ? "submit" : "button").'" formnovalidate class="button" name="cancel" value="'.dol_escape_htmltag($langs->trans("Cancel")).'"'.($backtopage ? '' : ' onclick="javascript:history.go(-1)"').'>'
+		  . '</div>';
 
 	print '</form>';
 
-	//dol_set_focus('input[name="ref"]');
+	dol_set_focus('input[name="label"]');
+}
+elseif ($action == 'add') {
+	$filename = GETPOST('CSVFile', 'alpha');
+	if (isset($_FILES['CSVFile'])) {
+		$filePath = $_FILES['CSVFile']['tmp_name'];
+		$object->label = GETPOST('label', 'alpha');
+		$object->createFromCSVFile($filePath, GETPOST('fk_account', 'int'));
+	}
 }
 
 // Part to edit record
@@ -250,9 +247,11 @@ if (($id || $ref) && $action == 'edit')
 
 	dol_fiche_end();
 
-	print '<div class="center"><input type="submit" class="button" name="save" value="'.$langs->trans("Save").'">';
-	print ' &nbsp; <input type="submit" class="button" name="cancel" value="'.$langs->trans("Cancel").'">';
-	print '</div>';
+	print '<div class="center">'
+		. '<input type="submit" class="button" name="save" value="'.$langs->trans("Save").'" />'
+		. '&nbsp;'
+		. '<input type="submit" class="button" name="cancel" formnovalidate value="'.$langs->trans("Cancel").'" />'
+		. '</div>';
 
 	print '</form>';
 }
@@ -583,6 +582,11 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 	include DOL_DOCUMENT_ROOT.'/core/tpl/card_presend.tpl.php';
 	*/
 }
+
+
+// share account select form with javascript
+//jsValuesAsJSON(array());
+//echo '<script type="application/javascript" src="js/bankstatement_card.js.php"></script>'."\n";
 
 // End of page
 llxFooter();

@@ -16,18 +16,19 @@
 
 CREATE TABLE llx_bankstatement_bankstatement(
 	-- BEGIN MODULEBUILDER FIELDS
-	rowid integer AUTO_INCREMENT PRIMARY KEY NOT NULL, 
-	ref varchar(128) DEFAULT '(PROV)' NOT NULL, 
-	tms timestamp, 
-	import_key varchar(14), 
+	rowid integer AUTO_INCREMENT PRIMARY KEY NOT NULL,
+	ref varchar(128) DEFAULT '(PROV)' NOT NULL,
 	label varchar(128),
-	fk_account integer NOT NULL,
-	user_import integer, 
-	date_import datetime, 
-	user_reconcile integer, 
-	date_reconcile datetime, 
-	date_start datetime, 
-	date_end datetime, 
-	status integer NOT NULL
+    status integer NOT NULL,
+    fk_account integer NOT NULL,
+    date_start datetime,
+    date_end datetime,
+	tms timestamp,
+	fk_user_import integer,
+	date_import datetime,
+	fk_user_reconcile integer,
+	date_reconcile datetime,
+    import_key varchar(14),
+    entity integer
 	-- END MODULEBUILDER FIELDS
 ) ENGINE=innodb;

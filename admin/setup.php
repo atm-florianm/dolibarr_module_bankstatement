@@ -1,6 +1,6 @@
 <?php
 /* Copyright (C) 2004-2017 Laurent Destailleur  <eldy@users.sourceforge.net>
- * Copyright (C) 2020 SuperAdmin
+ * Copyright (C) 2020 ATM Consulting
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,24 +46,52 @@ if (! $user->admin) accessforbidden();
 $action = GETPOST('action', 'alpha');
 $backtopage = GETPOST('backtopage', 'alpha');
 
+if ($action === 'ajax_set_const') {
+	$name = GETPOST('name', 'alpha');
+
+	if (!preg_match('/^BANKSTATEMENT_/', $name)) {
+		echo 'Error: modifying consts other than BANKSTATEMENT_ not allowed.';
+		exit;
+	}
+
+	$entity = GETPOST('entity', 'int');
+	$value = GETPOST('value');
+
+	if ($user->admin)
+	{
+		dolibarr_set_const($db, $name, $value, 'chaine', 0, '', $entity);
+	}
+	exit;
+}
+
+// Configuration data
+
+$separatorChoices = array(
+	'Comma'      => ',',
+	'Semicolon'  => ';',
+	'Tabulation' => "\t",
+	'Colon'      => ':',
+	'Pipe'       => '|',
+	);
+
 $defaultParameters = array(
 	'css'       => 'minwidth500',
 	'enabled'   => 1,
 	'type'      => 'text'
 );
 $specificParameters=array(
-	'BANKSTATEMENT_SEPARATOR'                           => array('pattern' => '^.$'),
-	'BANKSTATEMENT_MAPPING'                             => array(),
-	'BANKSTATEMENT_DATE_FORMAT'                         => array(),
-	'BANKSTATEMENT_HEADER'                              => array('type' => 'bool'),
-	'BANKSTATEMENT_MAC_COMPATIBILITY'                   => array('type' => 'bool'),
-	'BANKSTATEMENT_HISTORY_IMPORT'                      => array('type' => 'bool'),
-	'BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD'    => array('type' => 'bool'),
-	'BANKSTATEMENT_ALLOW_DRAFT_INVOICE'                 => array('type' => 'bool'),
-	'BANKSTATEMENT_UNCHECK_ALL_LINES'                   => array('type' => 'bool'),
-	'BANKSTATEMENT_AUTO_CREATE_DISCOUNT'                => array('type' => 'bool'),
-	'BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL' => array('type' => 'bool'),
-	'BANKSTATEMENT_ALLOW_FREELINES'                     => array('type' => 'bool')
+	'BANKSTATEMENT_SEPARATOR'                           => array('type' => 'datalist', 'pattern' => '^.$', 'suggestions' => $separatorChoices, 'required' => 1,),
+	'BANKSTATEMENT_MAPPING'                             => array('required' => 1,),
+	'BANKSTATEMENT_DATE_FORMAT'                         => array('required' => 1,),
+	'BANKSTATEMENT_HEADER'                              => array('type' => 'bool',),
+	'BANKSTATEMENT_MAC_COMPATIBILITY'                   => array('type' => 'bool',),
+	'BANKSTATEMENT_HISTORY_IMPORT'                      => array('type' => 'bool',),
+	'BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD'    => array('type' => 'bool',),
+	'BANKSTATEMENT_ALLOW_DRAFT_INVOICE'                 => array('type' => 'bool',),
+	'BANKSTATEMENT_UNCHECK_ALL_LINES'                   => array('type' => 'bool',),
+	'BANKSTATEMENT_AUTO_CREATE_DISCOUNT'                => array('type' => 'bool',),
+	'BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL' => array('type' => 'bool',),
+	'BANKSTATEMENT_ALLOW_FREELINES'                     => array('type' => 'bool',)
 );
 $arrayofparameters = array_map(
 	function($specificParameters) use ($defaultParameters) {
@@ -73,14 +101,8 @@ $arrayofparameters = array_map(
 );
 
 /*
- * Actions: in update mode, automatically set config values for parameters that exist in the keys of $arrayofparameters
+ * Main View
  */
-//if ((float) DOL_VERSION >= 6) include DOL_DOCUMENT_ROOT.'/core/actions_setmoduleoptions.inc.php';
-
-/*
- * View
- */
-
 $page_name = "BankStatementSetup";
 llxHeader('', $langs->trans($page_name));
 
@@ -120,10 +142,23 @@ function get_conf_input($confName, $parameters) {
 		htmlspecialchars($confName, ENT_COMPAT),
 		htmlspecialchars($parameters['css'], ENT_COMPAT)
 	);
+	if (!empty($parameters['required'])) $inputAttrs .= ' required';
 	switch ($parameters['type']) {
 		case 'bool':
 			$input = ajax_constantonoff($confName);
 			break;
+		case 'datalist':
+			// no break => will also run case 'text'
+			$options = array();
+			foreach ($parameters['suggestions'] as $label => $value) {
+				$options[] = '<option value="' . $value . '">' . $langs->trans($label) . '</option>';
+			}
+			$datalist = sprintf(
+				'<datalist id="%s">%s</datalist>',
+				$confName . '_suggestions',
+				join("\n", $options)
+			);
+			$inputAttrs .= ' list="' . $confName . '_suggestions' . '"';
 		case 'text':
 			if (isset($parameters['pattern'])) {
 				$inputAttrs .= ' pattern="' . $parameters['pattern'] . '"';
@@ -135,6 +170,7 @@ function get_conf_input($confName, $parameters) {
 				$confName,
 				$langs->trans('Modify')
 			) . '<script type="text/javascript">$(()=>ajaxSaveOnClick("'.htmlspecialchars($confName, ENT_COMPAT).'"));</script>';
+			if (isset($datalist)) $input .= $datalist;
 			break;
 		default:
 			$input = $confValue;

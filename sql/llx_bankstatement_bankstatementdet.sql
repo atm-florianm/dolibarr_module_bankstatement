@@ -14,14 +14,14 @@
 -- along with this program.  If not, see https://www.gnu.org/licenses/.
 
 
-CREATE TABLE llx_bankstatementdet(
+CREATE TABLE llx_bankstatement_bankstatementdet(
 	-- BEGIN MODULEBUILDER FIELDS
 	rowid            integer AUTO_INCREMENT PRIMARY KEY NOT NULL,
-	date             datetime,     -- date of bank transaction
-	label            varchar(128), -- label
-	amount           double(24,8), -- amount of transaction (always > 0)
-	type             tinyint,      -- 0: CREDIT;        1: DEBIT
-	status           tinyint,      -- 0: UNRECONCILED;  1: RECONCILED
-	fk_bankstatement integer       -- rowid of llx_bankstatement_bankstatement
+	date             datetime NOT NULL,     -- date of bank transaction
+	label            varchar(128),          -- label
+	amount           double(24,8) NOT NULL, -- amount of transaction (always > 0)
+	type             tinyint NOT NULL,      -- 0: CREDIT;        1: DEBIT
+	status           tinyint NOT NULL,      -- 0: UNRECONCILED;  1: RECONCILED
+	fk_bankstatement integer NOT NULL       -- rowid of llx_bankstatement_bankstatement
 	-- END MODULEBUILDER FIELDS
 ) ENGINE=innodb;

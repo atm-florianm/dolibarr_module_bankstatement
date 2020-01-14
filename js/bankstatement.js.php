@@ -65,12 +65,12 @@ if (!_trans) _trans = [];
  */
 function ajaxSaveOnClick(code) {
 	// TODO: replace constantonoff.php with a dedicated ajax backend (would be cleaner)
-	let url = '<?php echo DOL_URL_ROOT; ?>/core/ajax/constantonoff.php';
+	let url = window.location.origin+window.location.pathname;
 	$("#" + code).closest('form').submit(
 		function(ev) {
 			let entity = '<?php echo $conf->entity; ?>';
 			let value = $('#' + code).val()
-			let action = 'set';
+			let action = 'ajax_set_const';
 			if (value == '') action = 'del';
 			$.get(
 				url,
@@ -91,12 +91,21 @@ function ajaxSaveOnClick(code) {
 
 
 /* Javascript library of module BankStatement */
+
 window.addEventListener('load', function() {
-	$('form input').bind(
-		'invalid',
-		function(ev) {
-			$.jnotify(_trans['ErrorInputDoesNotMatchPattern'], 'error');
-			ev.preventDefault();
-		}
-	);
+	// Show custom error message when a required form field is not set
+	//$('form input').bind(
+	//	'invalid',
+	//	function(ev) {
+	//		let target = ev.target;
+	//		let customInvalidMessage = '';
+	//		if(target.required && !target.value) {
+	//			customInvalidMessage = _trans['ErrorFieldRequired'];
+	//		} else {
+	//			customInvalidMessage = _trans['ErrorInputDoesNotMatchPattern'];
+	//		}
+	//		ev.target.setCustomValidity(customInvalidMessage);
+	//		setTimeout(function () {ev.target.setCustomValidity('');}, 0);
+	//	}
+	//);
 });

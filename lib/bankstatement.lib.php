@@ -56,3 +56,15 @@ function bankstatementAdminPrepareHead()
 
 	return $head;
 }
+
+/**
+ * @param array $dataArray  Associative array of key/value pairs you want to be made available to your script
+ * @param string $varName   Name for the variable (defaults to 'window.jsonDataArray'). Use a different name
+ *                          if you call the function more than once.
+ */
+function jsValuesAsJSON($dataArray, $varName = 'window.jsonDataArray')
+{
+	echo '<script type="application/javascript">' . "\n"
+		. $varName . '=' . json_encode($dataArray) . ";\n"
+		. "</script>\n";
+}
