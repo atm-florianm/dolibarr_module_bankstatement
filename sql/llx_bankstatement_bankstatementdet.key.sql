@@ -1,4 +1,4 @@
--- Copyright (C) ---Put here your own copyright and developer email---
+-- Copyright (C) 2020  ATM Consulting <support@atm-consulting.fr>
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -13,11 +13,7 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see https://www.gnu.org/licenses/.
 
-
 -- BEGIN MODULEBUILDER INDEXES
-ALTER TABLE llx_bankstatement_bankstatement ADD INDEX idx_bankstatement_bankstatement_rowid (rowid);
-ALTER TABLE llx_bankstatement_bankstatement ADD INDEX idx_bankstatement_bankstatement_ref (ref);
+ALTER TABLE llx_bankstatement_bankstatementdet ADD INDEX idx_bankstatement_bankstatementdet_rowid (rowid);
 -- END MODULEBUILDER INDEXES
 
--- ALTER TABLE llx_bankstatement_bankstatement ADD UNIQUE INDEX uk_bankstatement_bankstatement_fieldxy(fieldx, fieldy);
--- ALTER TABLE llx_bankstatement_bankstatement ADD CONSTRAINT llx_bankstatement_bankstatement_fk_field FOREIGN KEY (fk_field) REFERENCES llx_bankstatement_myotherobject(rowid);

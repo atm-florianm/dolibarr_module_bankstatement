@@ -1,4 +1,4 @@
--- Copyright (C) ---Put here your own copyright and developer email---
+-- Copyright (C) 2020  ATM Consulting <support@atm-consulting.fr>
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -14,10 +14,14 @@
 -- along with this program.  If not, see https://www.gnu.org/licenses/.
 
 
--- BEGIN MODULEBUILDER INDEXES
-ALTER TABLE llx_bankstatement_bankstatement ADD INDEX idx_bankstatement_bankstatement_rowid (rowid);
-ALTER TABLE llx_bankstatement_bankstatement ADD INDEX idx_bankstatement_bankstatement_ref (ref);
--- END MODULEBUILDER INDEXES
-
--- ALTER TABLE llx_bankstatement_bankstatement ADD UNIQUE INDEX uk_bankstatement_bankstatement_fieldxy(fieldx, fieldy);
--- ALTER TABLE llx_bankstatement_bankstatement ADD CONSTRAINT llx_bankstatement_bankstatement_fk_field FOREIGN KEY (fk_field) REFERENCES llx_bankstatement_myotherobject(rowid);
+CREATE TABLE llx_bankstatementdet(
+	-- BEGIN MODULEBUILDER FIELDS
+	rowid            integer AUTO_INCREMENT PRIMARY KEY NOT NULL,
+	date             datetime,     -- date of bank transaction
+	label            varchar(128), -- label
+	amount           double(24,8), -- amount of transaction (always > 0)
+	type             tinyint,      -- 0: CREDIT;        1: DEBIT
+	status           tinyint,      -- 0: UNRECONCILED;  1: RECONCILED
+	fk_bankstatement integer       -- rowid of llx_bankstatement_bankstatement
+	-- END MODULEBUILDER FIELDS
+) ENGINE=innodb;

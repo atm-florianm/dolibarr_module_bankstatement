@@ -1,4 +1,4 @@
--- Copyright (C) ---Put here your own copyright and developer email---
+-- Copyright (C) 2020  ATM Consulting <support@atm-consulting.fr>
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -20,7 +20,8 @@ CREATE TABLE llx_bankstatement_bankstatement(
 	ref varchar(128) DEFAULT '(PROV)' NOT NULL, 
 	tms timestamp, 
 	import_key varchar(14), 
-	label varchar(128), 
+	label varchar(128),
+	fk_account integer NOT NULL,
 	user_import integer, 
 	date_import datetime, 
 	user_reconcile integer, 
