@@ -215,8 +215,9 @@ class BankStatementLine extends CommonObjectLine
 		$resql = $this->db->query($sql);
 		if ($resql) {
 			$num = $this->db->num_rows($resql);
+			if ($limit) $num = min($limit, $num);
 			$i = 0;
-			while ($i < min($limit, $num))
+			while ($i < $num)
 			{
 				$obj = $this->db->fetch_object($resql);
 
