@@ -163,6 +163,21 @@ class modBankStatement extends DolibarrModules
 			'target'=>'',
 			'user'=>0
 		);
+		$r++;
+		$this->menu[$r]=array(
+			'fk_menu'=>'fk_mainmenu=bank,fk_leftmenu=bankstatement',
+			'type'=>'left',
+			'titre'=>'LeftMenuBankStatement_create',
+			'mainmenu'=>'bank',
+			'leftmenu'=>'bankstatement',
+			'url'=>'/bankstatement/bankstatement_card.php?action=create',
+			'langs'=>'bankstatement@bankstatement',
+			'position'=>100,
+			'enabled'=>'$conf->bankstatement->enabled',
+			'perms'=>'$user->rights->bankstatement->read',
+			'target'=>'',
+			'user'=>0
+		);
 
 		// Exports
 	}

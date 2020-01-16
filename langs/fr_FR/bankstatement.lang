@@ -24,7 +24,8 @@ BankStatementAboutPage = À propos du module Import de relevés de banque
 About = À propos
 
 # Menus
-LeftMenuBankStatement=Import de relevés de banque
+LeftMenuBankStatement=Relevés de banque
+LeftMenuBankStatement_create=Importer un relevé
 
 # Setup
 BankStatementSetup = Configuration du module Import de relevés de banque
@@ -37,10 +38,13 @@ ImportAndReconcileBankStatements=Importer et rapprocher des relevés de banque
 
 # Module configuration
 BANKSTATEMENT_SEPARATOR=Séparateur des données du fichier
-BANKSTATEMENT_MAPPING=Colonnes du fichier CSV
+BANKSTATEMENT_MAPPING=Correspondance / ordre des colonnes du fichier CSV
 BANKSTATEMENT_DATE_FORMAT=Format de date du fichier CSV
+BANKSTATEMENT_USE_DIRECTION=Le format utilise une colonne <b>direction</b>
+BANKSTATEMENT_DIRECTION_CREDIT=Valeur pour crédit
+BANKSTATEMENT_DIRECTION_DEBIT=Valeur si débit
 BANKSTATEMENT_HEADER=Le fichier contient une ligne d'en-tête
-BANKSTATEMENT_MAC_COMPATIBILITY=Le fichier est à l’ancien format Mac
+BANKSTATEMENT_LINE_SEPARATOR=Séparateur de fin de ligne (ex : Mac)
 BANKSTATEMENT_HISTORY_IMPORT=Activer l'historisation des imports avec le contenu du fichier
 BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD=Autoriser le règlement / rapprochement sur des factures appartenant à différents tiers
 BANKSTATEMENT_ALLOW_DRAFT_INVOICE=Autoriser le rapprochement sur des factures au statut brouillon (validation de la facture et création du règlement)
@@ -50,11 +54,14 @@ BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL=Chercher les lignes d'écritur
 BANKSTATEMENT_ALLOW_FREELINES=Autoriser la création d'écritures bancaires libres (non liées à un règlement)
 
 BANKSTATEMENT_SEPARATOR_Help=Caractère utilisé pour séparer les colonnes de votre fichier CSV (habituellement ";" ou ",". Un seul caractère).
-BANKSTATEMENT_MAPPING_Help=Correspondance des colonnes de votre fichier CSV. Attention, la correspondance doit forcément contenir les codes "date", "label", "debit" et "credit".<br>Si votre fichier ne contient qu'une seule colonne pour le montant de la transaction, utiliser "amount" et éventuellement, si vous avez une colonne sens, "direction=Mot clé pour débit" (par example "direction=DÉBIT" ou "direction=-") au lieu de "debit" et "credit".<br>Si votre fichier contient d'autres colonnes, nommez-les "null" dans la correspondance.
-BANKSTATEMENT_DATE_FORMAT_Help=Format de date utilisé dans votre fichier CSV (%%d correspond au jour sur deux caractères, %%m au mois sur deux caractère et %%Y l'année sur 4 caractères). Par exemple la date 25/07/2013 correspond au format %%d/%%m/%%Y.
+BANKSTATEMENT_MAPPING_Help=Colonnes obligatoires : "<b>date</b>" et "<b>label</b>".<br/>Le montant (obligatoire) peut être sous plusieurs formes : <ul><li>deux colonnes "<b>debit</b>" et "<b>credit</b>" </li><li> deux colonnes "<b>amount</b>" et "<b>direction</b>" </li><li>une seule colonne "<b>amount</b>" dont le signe détermine la direction</li></ul>Si votre fichier contient d'autres colonnes, nommez-les "<b>null</b>" dans la correspondance ou laissez-les vides.
+BANKSTATEMENT_DATE_FORMAT_Help=Format de date utilisé dans votre fichier CSV (<b>d</b> correspond au jour sur deux caractères, <b>m</b> au mois sur deux caractère et <b>Y</b> l'année sur 4 caractères). Par exemple la date 25/07/2013 correspond au format d/m/Y.
+BANKSTATEMENT_USE_DIRECTION_Help=Le fichier CSV possède une colonne montant de la transaction en valeur absolue ("<b>amount</b>" dans la correspondance) et une colonne indiquant s’il s’agit d’un crédit ou d’un débit ("<b>direction</b>" dans la correspondance). <br/> S’il n’y a pas de colonne "<b>direction</b>" mais qu’il y a une colonne "<b>amount</b>", cette colonne doit alors contenir des nombres négatifs pour les débits et positifs pour les crédits.
+BANKSTATEMENT_DIRECTION_CREDIT_Help=La valeur de la colonne 'direction' qui indique que le montant de la transaction est un crédit. Par exemple, 'crédit' ou '+' ou vide…
+BANKSTATEMENT_DIRECTION_DEBIT_Help=La valeur de la colonne 'direction' qui indique que le montant de la transaction est un débit. Par exemple, 'débit' ou '-'…
 BANKSTATEMENT_HEADER_Help=Si activé, la première ligne du fichier CSV sera considérée comme une ligne d’en-tête et non de données.
-BANKSTATEMENT_MAC_COMPATIBILITY_Help=Le fichier utilise le retour chariot comme caractère de fin de ligne
-BANKSTATEMENT_HISTORY_IMPORT_Help= (<b>Attention : une ligne d'en-tête doit être présent dans votre fichier</b>)
+BANKSTATEMENT_LINE_SEPARATOR_Help=Utiliser cette option si le fichier utilise le retour chariot comme caractère de fin de ligne (c’est le cas pour certains fichiers générés avec MacOS)
+BANKSTATEMENT_HISTORY_IMPORT_Help= (<b>Attention : une ligne d'en-tête doit être présente dans votre fichier</b>)
 BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD_Help=
 BANKSTATEMENT_ALLOW_DRAFT_INVOICE_Help=
 BANKSTATEMENT_UNCHECK_ALL_LINES_Help=
@@ -62,7 +69,7 @@ BANKSTATEMENT_AUTO_CREATE_DISCOUNT_Help=
 BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL_Help=
 BANKSTATEMENT_ALLOW_FREELINES_Help=
 
-Tabulation=Tabulation (\t)
+Tabulation=Tabulation (<b>↹</b>)
 Comma=Virgule (,)
 Colon=Deux-points (:)
 Pipe=Barre verticale (|)
@@ -71,6 +78,11 @@ Pipe=Barre verticale (|)
 # Setup errors
 ErrorInputDoesNotMatchPattern=Non sauvegardé : votre saisie ne correspond pas au format attendu.
 ErrorFieldRequired=Ce champ est obligatoire.
+
+# CSV errors
+ErrorCSVLineFormatMismatch=Erreur : la ligne %d du CSV n’est pas conforme au format attendu <br/> %s
+ErrorUnableToCreateBankStatementLine=Erreur SQL lors de la création d’une ligne de relevé
+ErrorCSVColumnCountMismatch=Erreur : import configuré pour CSV à %d colonnes ; %d colonnes trouvées
 
 # BankStatement Object
 BankStatement=Relevé de banque
@@ -81,6 +93,9 @@ DateImport=Date d’import
 UserReconcile=Utilisateur ayant réalisé le rapprochement
 DateReconcile=Date du rapprochement
 DateStart=Date
+
+# Actions
+Reconcile = Rapprocher
 
 # Card
 FileToImport=Fichier à importer

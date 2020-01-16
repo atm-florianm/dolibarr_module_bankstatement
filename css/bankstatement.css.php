@@ -40,3 +40,7 @@ else header('Cache-Control: no-cache');
 .debit_line > td.linecoldebit {
 	color: red;
 }
+
+.hide_conf {
+	display: none;
+}

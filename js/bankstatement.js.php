@@ -89,6 +89,19 @@ function ajaxSaveOnClick(code) {
 	);
 }
 
+/**
+ * Force page reload after a particular element is clicked.
+ * For instance, an ajax constant on/off button usually doesn’t reload
+ * the page, but you might want a page reload if it triggers something.
+ * @param elem
+ */
+function reloadOnClick(confName, confName2) {
+	let toggleShowInput = function() {
+		$('#' + confName2).closest('tr').toggleClass('hide_conf');
+	};
+	$('#set_' + confName).click(toggleShowInput);
+	$('#del_' + confName).click(toggleShowInput);
+}
 
 /* Javascript library of module BankStatement */
 

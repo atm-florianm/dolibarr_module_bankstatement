@@ -20,7 +20,7 @@ CREATE TABLE llx_bankstatement_bankstatementdet(
 	date             datetime NOT NULL,     -- date of bank transaction
 	label            varchar(128),          -- label
 	amount           double(24,8) NOT NULL, -- amount of transaction (always > 0)
-	type             tinyint NOT NULL,      -- 0: CREDIT;        1: DEBIT
+	direction        tinyint NOT NULL,      -- -1: DEBIT;        1: CREDIT
 	status           tinyint NOT NULL,      -- 0: UNRECONCILED;  1: RECONCILED
 	fk_bankstatement integer NOT NULL       -- rowid of llx_bankstatement_bankstatement
 	-- END MODULEBUILDER FIELDS

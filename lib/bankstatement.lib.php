@@ -21,6 +21,11 @@
  * \brief   Library files with common functions for BankStatement
  */
 
+const DIRECTION_DEBIT = -1;
+const DIRECTION_CREDIT = 1;
+const STATUS_UNRECONCILED = 0;
+const STATUS_RECONCILED   = 1;
+
 /**
  * Prepare admin pages header
  *
@@ -67,4 +72,14 @@ function jsValuesAsJSON($dataArray, $varName = 'window.jsonDataArray')
 	echo '<script type="application/javascript">' . "\n"
 		. $varName . '=' . json_encode($dataArray) . ";\n"
 		. "</script>\n";
+}
+
+/**
+ * Tells whether the raw (signed) amount of a bank operation is a debit operation or a credit operation.
+ * @param $rawAmount
+ * @return int|null  NULL if amount == 0 (amounts of bank transactions should not be 0)
+ */
+function getAmountType($rawAmount) {
+	if ($rawAmount > 0) return DIRECTION_CREDIT;
+	if ($rawAmount < 0) return DIRECTION_DEBIT;
 }

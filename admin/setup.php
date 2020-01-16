@@ -72,26 +72,36 @@ $separatorChoices = array(
 	'Tabulation' => "\t",
 	'Colon'      => ':',
 	'Pipe'       => '|',
-	);
+);
+$lineSeparatorChoices = array(
+	'LineSeparatorDefault' => '',
+	'LineSeparatorWindows' => "\\r\\n",
+	'LineSeparatorUnix'    => "\\n",
+	'LineSeparatorMac'     => "\\r"
+);
 
 $defaultParameters = array(
 	'css'       => 'minwidth500',
 	'enabled'   => 1,
-	'type'      => 'text'
+	'inputtype'      => 'text'
 );
+
 $specificParameters=array(
-	'BANKSTATEMENT_SEPARATOR'                           => array('type' => 'datalist', 'pattern' => '^.$', 'suggestions' => $separatorChoices, 'required' => 1,),
-	'BANKSTATEMENT_MAPPING'                             => array('required' => 1,),
+	'BANKSTATEMENT_SEPARATOR'                           => array('required' => 1, 'pattern' => '^.$', 'suggestions' => $separatorChoices,),
+	'BANKSTATEMENT_MAPPING'                             => array('required' => 1, 'pattern' => '.*(?=.*\\bdate\\b)(?=.*\\blabel\\b)((?=.*\\bcredit\\b)(?=.*\\bdebit\\b)|(?=.*\\bamount\\b)).*'),
 	'BANKSTATEMENT_DATE_FORMAT'                         => array('required' => 1,),
-	'BANKSTATEMENT_HEADER'                              => array('type' => 'bool',),
-	'BANKSTATEMENT_MAC_COMPATIBILITY'                   => array('type' => 'bool',),
-	'BANKSTATEMENT_HISTORY_IMPORT'                      => array('type' => 'bool',),
-	'BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD'    => array('type' => 'bool',),
-	'BANKSTATEMENT_ALLOW_DRAFT_INVOICE'                 => array('type' => 'bool',),
-	'BANKSTATEMENT_UNCHECK_ALL_LINES'                   => array('type' => 'bool',),
-	'BANKSTATEMENT_AUTO_CREATE_DISCOUNT'                => array('type' => 'bool',),
-	'BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL' => array('type' => 'bool',),
-	'BANKSTATEMENT_ALLOW_FREELINES'                     => array('type' => 'bool',)
+	'BANKSTATEMENT_USE_DIRECTION'                       => array('inputtype' => 'bool', 'required_by' => array('BANKSTATEMENT_DIRECTION_CREDIT', 'BANKSTATEMENT_DIRECTION_DEBIT'),),
+	'BANKSTATEMENT_DIRECTION_CREDIT'                    => array('depends' => 'BANKSTATEMENT_USE_DIRECTION',),
+	'BANKSTATEMENT_DIRECTION_DEBIT'                     => array('depends' => 'BANKSTATEMENT_USE_DIRECTION',),
+	'BANKSTATEMENT_HEADER'                              => array('inputtype' => 'bool',),
+//	'BANKSTATEMENT_LINE_SEPARATOR'                      => array('inputtype' => 'select', 'options' => $lineSeparatorChoices,),
+//	'BANKSTATEMENT_HISTORY_IMPORT'                      => array('inputtype' => 'bool',),
+	'BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD'    => array('inputtype' => 'bool',),
+	'BANKSTATEMENT_ALLOW_DRAFT_INVOICE'                 => array('inputtype' => 'bool',),
+	'BANKSTATEMENT_UNCHECK_ALL_LINES'                   => array('inputtype' => 'bool',),
+	'BANKSTATEMENT_AUTO_CREATE_DISCOUNT'                => array('inputtype' => 'bool',),
+	'BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL' => array('inputtype' => 'bool',),
+	'BANKSTATEMENT_ALLOW_FREELINES'                     => array('inputtype' => 'bool',)
 );
 $arrayofparameters = array_map(
 	function($specificParameters) use ($defaultParameters) {
@@ -143,23 +153,43 @@ function get_conf_input($confName, $parameters) {
 		htmlspecialchars($parameters['css'], ENT_COMPAT)
 	);
 	if (!empty($parameters['required'])) $inputAttrs .= ' required';
-	switch ($parameters['type']) {
+	switch ($parameters['inputtype']) {
 		case 'bool':
 			$input = ajax_constantonoff($confName);
+			if (!empty($parameters['required_by'])) {
+				// enable page reload on value switch
+				foreach ($parameters['required_by'] as $subConfName) {
+					$input .= '<script>$(()=>reloadOnClick("' . $confName . '", "' . $subConfName . '"));</script>';
+				}
+			}
 			break;
-		case 'datalist':
-			// no break => will also run case 'text'
+		case 'select':
 			$options = array();
-			foreach ($parameters['suggestions'] as $label => $value) {
+			foreach ($parameters['options'] as $label => $value) {
 				$options[] = '<option value="' . $value . '">' . $langs->trans($label) . '</option>';
 			}
-			$datalist = sprintf(
-				'<datalist id="%s">%s</datalist>',
-				$confName . '_suggestions',
-				join("\n", $options)
-			);
-			$inputAttrs .= ' list="' . $confName . '_suggestions' . '"';
+			$input = sprintf(
+				'<select %s id="%s">%s</select> <button class="but" id="btn_save_%s">%s</button>',
+				$inputAttrs,
+				$confName,
+				join("\n", $options),
+				$confName,
+				$langs->trans('Modify')
+			) . '<script type="text/javascript">$(()=>ajaxSaveOnClick("'.htmlspecialchars($confName, ENT_COMPAT).'"));</script>';
+			break;
 		case 'text':
+			if (isset($parameters['suggestions'])) {
+				$options = array();
+				foreach ($parameters['suggestions'] as $label => $value) {
+					$options[] = '<option value="' . $value . '">' . $langs->trans($label) . '</option>';
+				}
+				$datalist = sprintf(
+					'<datalist id="%s">%s</datalist>',
+					$confName . '_suggestions',
+					join("\n", $options)
+				);
+				$inputAttrs .= ' list="' . $confName . '_suggestions' . '"';
+			}
 			if (isset($parameters['pattern'])) {
 				$inputAttrs .= ' pattern="' . $parameters['pattern'] . '"';
 			}
@@ -200,11 +230,17 @@ $form = new Form($db);
 	<tbody>
 	<?php
 	foreach ($arrayofparameters as $confName => $confParams) {
+		$tableRowClass = 'oddeven';
+		if (!empty($confParams['depends']) && empty($conf->global->{$confParams['depends']})) {
+			// do not show configuration input if it depends on a disabled option
+			$tableRowClass .= ' hide_conf';
+		}
 		printf(
-			'<tr class="oddeven">'
+			'<tr class="%s">'
 			. '<td>%s</td>'
 			. '<td>%s</td>'
 			. '</tr>',
+			$tableRowClass,
 			get_conf_label($confName, $arrayofparameters[$confName], $form),
 			get_conf_input($confName, $arrayofparameters[$confName])
 		);

@@ -22,6 +22,8 @@
  * \brief       This file is a CRUD class file for BankStatementLine (Create/Read/Update/Delete)
  */
 
+dol_include_once('/bankstatement/lib/bankstatement.lib.php');
+
 /**
  * Class for BankStatementLine.
  */
@@ -36,10 +38,10 @@ class BankStatementLine extends CommonObjectLine
 	/** @var string $table_element Name of table without prefix where object is stored */
 	public $table_element = 'bankstatement_bankstatementdet';
 
-	const TYPE_CREDIT = 1;
-	const TYPE_DEBIT = -1;
-	const STATUS_UNRECONCILED = 0;
-	const STATUS_RECONCILED = 1;
+	const DIRECTION_CREDIT = DIRECTION_CREDIT;
+	const DIRECTION_DEBIT  = DIRECTION_DEBIT;
+	const STATUS_UNRECONCILED = STATUS_UNRECONCILED;
+	const STATUS_RECONCILED   = STATUS_RECONCILED;
 
 	// BEGIN MODULEBUILDER PROPERTIES
 	/**
@@ -50,7 +52,7 @@ class BankStatementLine extends CommonObjectLine
 		'date'             => array('type'=>'date',         'label'=>'TransactionDate', 'enabled'=>1, 'position'=>2, 'notnull'=>1, 'visible'=> 1,),
 		'label'            => array('type'=>'varchar(128)', 'label'=>'Label',           'enabled'=>1, 'position'=>3, 'notnull'=>0, 'visible'=> 1,),
 		'amount'           => array('type'=>'double(24,8)', 'label'=>'Amount',          'enabled'=>1, 'position'=>4, 'notnull'=>1, 'visible'=> 1,),
-		'type'             => array('type'=>'integer',      'label'=>'Type',            'enabled'=>1, 'position'=>5, 'notnull'=>1, 'visible'=> 1, 'arrayofkeyval'=>array(self::TYPE_CREDIT=>'Credit', self::TYPE_DEBIT=>'Debit'),),
+		'direction'        => array('type'=>'integer',      'label'=>'Type',            'enabled'=>1, 'position'=>5, 'notnull'=>1, 'visible'=> 1, 'arrayofkeyval'=>array(self::DIRECTION_CREDIT=>'Credit', self::DIRECTION_DEBIT=>'Debit'),),
 		'status'           => array('type'=>'integer',      'label'=>'Status',          'enabled'=>1, 'position'=>6, 'notnull'=>1, 'visible'=> 1, 'arrayofkeyval'=>array(0=>'Unreconciled', 1=>'Reconciled'),),
 		'fk_bankstatement' => array('type'=>'integer',      'label'=>'BankStatement',   'enabled'=>1, 'position'=>7, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'bankstatement_bankstatement.rowid',),
 	);
@@ -58,12 +60,13 @@ class BankStatementLine extends CommonObjectLine
 	public $date;
 	public $label;
 	public $amount;
-	public $type;
+	public $direction;
 	public $status;
 	public $fk_bankstatement;
 	// END MODULEBUILDER PROPERTIES
 
-	// not from module builder: these definitions will help display the 'credit' and 'debit' field
+	// NOT module builder: these definitions will mimic modulebuilder fields to help display the 'credit' and 'debit' dynamic fields
+	// we call these 'dynamic' because their values are not stored directly (as is) in database
 	public $dynamicFields = array(
 		'credit' => array('type' => 'double(24,8)', 'label'=>'Credit', 'enabled'=>1, 'visible'=>1),
 		'debit'  => array('type' => 'double(24,8)', 'label'=>'Debit',  'enabled'=>1, 'visible'=>1),
@@ -90,44 +93,15 @@ class BankStatementLine extends CommonObjectLine
 	 *
 	 * @param array $dataRow  Associative array with keys: 'date', 'label', 'credit', 'debit'
 	 */
-	public function setValuesFromCSVRow($dataRow)
+	public function setValuesFromStandardizedCSVRow($dataRow)
 	{
-		global $conf;
-		$this->status = self::STATUS_UNRECONCILED;
-		$row = array_combine($this->CSVFormat->mapping, $dataRow);
-		if (!empty($row['date'])) {
-			$this->date = DateTime::createFromFormat(
-				$this->CSVFormat->dateFormat,
-				$row['date']
-			);
-		}
-		if (!empty($this->date)) {
-			$this->date->setTime(0, 0, 0);
-			$this->date = $this->date->getTimestamp();
-		} else {
-			$this->error = 'ErrorBankStatementLineHasNoDate';
-			return;
-		}
-
-		if (isset($row['label'])) $this->label = $row['label'];
-
-		if (isset($row['credit']) && is_numeric($row['credit'])) {
-			$this->credit = doubleval(price2num($row['credit']));
-			$this->type = self::TYPE_CREDIT;
-			$this->amount = $this->credit;
-		}
-
-		if (isset($row['debit' ]) && is_numeric($row['debit'])) {
-			$this->debit  = doubleval(price2num($row['debit' ]));
-			$this->type = self::TYPE_DEBIT;
-			$this->amount = $this->debit;
-		}
-
-		if ($this->credit && $this->debit) {
-			$this->error = 'ErrorBankStatementLineHasBothDebitAndCredit';
-		} elseif (!$this->credit && !$this->debit) {
-			$this->error = 'ErrorBankStatementLineHasNeitherDebitAndCredit';
-		}
+		$this->status    = self::STATUS_UNRECONCILED;
+		$this->date      = $dataRow['date'];
+		$this->label     = $dataRow['label'];
+		$this->amount    = $dataRow['amount'];
+		$this->direction = $dataRow['direction'];
+		$this->error     = $dataRow['error'];
+		$this->calculateDebitCredit();
 	}
 
 	/**
@@ -138,11 +112,19 @@ class BankStatementLine extends CommonObjectLine
 	public function setVarsFromFetchObj(&$obj)
 	{
 		parent::setVarsFromFetchObj($obj);
-		switch ($this->type) {
-			case self::TYPE_CREDIT:
+		$this->calculateDebitCredit();
+	}
+
+	/**
+	 * Set the 'debit' and 'credit' fields using amount and direction
+	 */
+	public function calculateDebitCredit()
+	{
+		switch ($this->direction) {
+			case self::DIRECTION_CREDIT:
 				$this->credit = $this->amount;
 				break;
-			case self::TYPE_DEBIT:
+			case self::DIRECTION_DEBIT:
 				$this->debit = $this->amount;
 				break;
 		}
@@ -161,7 +143,7 @@ class BankStatementLine extends CommonObjectLine
 			// do not allow inserting a line that is attached to no bank statement
 			return -1;
 		}
-		if ($this->type === null) {
+		if ($this->direction === null) {
 			// do not allow inserting a line with no type
 			return -1;
 		}

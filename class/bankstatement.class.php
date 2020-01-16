@@ -26,8 +26,7 @@
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
 require_once 'bankstatementline.class.php';
 dol_include_once('/bankstatement/core/modules/bankstatement/mod_bankstatement_standard.php');
-//require_once DOL_DOCUMENT_ROOT . '/societe/class/societe.class.php';
-//require_once DOL_DOCUMENT_ROOT . '/product/class/product.class.php';
+dol_include_once('/bankstatement/lib/bankstatement.lib.php');
 
 /**
  * Class for BankStatement
@@ -59,10 +58,8 @@ class BankStatement extends CommonObject
 	 */
 	public $picto = 'bankstatement@bankstatement';
 
-
-	const STATUS_DRAFT = 0;
-	const STATUS_VALIDATED = 1;
-	const STATUS_CANCELED = 9;
+	const STATUS_UNRECONCILED = STATUS_UNRECONCILED;
+	const STATUS_RECONCILED   = STATUS_RECONCILED;
 
 
 	/**
@@ -97,7 +94,7 @@ class BankStatement extends CommonObject
 		'rowid'             => array('type'=>'integer',      'label'=>'TechnicalID',      'enabled'=>1, 'position'=>1,    'notnull'=>1,  'visible'=> 0, 'noteditable'=>1, 'index'=>1, 'comment'=>"Id"),
 		'ref'               => array('type'=>'varchar(128)', 'label'=>'Ref',              'enabled'=>1, 'position'=>10,   'notnull'=>1,  'visible'=> 4, 'noteditable'=>1, 'default'=>'(PROV)', 'index'=>1, 'searchall'=>1, 'showoncombobox'=>'1', 'comment'=>"Reference"),
 		'label'             => array('type'=>'varchar(128)', 'label'=>'Label',            'enabled'=>1, 'position'=>11,   'notnull'=>0,  'visible'=> 1, 'searchall'=>1,),
-		'status'            => array('type'=>'integer',      'label'=>'Status',           'enabled'=>1, 'position'=>12,   'notnull'=>1,  'visible'=> 4, 'noteditable'=>1, 'arrayofkeyval'=>array('0'=>'Unreconciled', '1'=>'Reconciled'),),
+		'status'            => array('type'=>'integer',      'label'=>'Status',           'enabled'=>1, 'position'=>12,   'notnull'=>1,  'visible'=> 4, 'noteditable'=>1, 'arrayofkeyval'=>array(self::STATUS_UNRECONCILED=>'Unreconciled', self::STATUS_RECONCILED=>'Reconciled'),),
 		'fk_account'        => array('type'=>'integer',      'label'=>'Account',          'enabled'=>1, 'position'=>13,   'notnull'=>1,  'visible'=> 1, 'foreignkey'=>'bank_account.rowid',),
 		'date_start'        => array('type'=>'date',         'label'=>'DateStart',        'enabled'=>1, 'position'=>20,   'notnull'=>0,  'visible'=> -4,),
 		'date_end'          => array('type'=>'date',         'label'=>'DateEnd',          'enabled'=>1, 'position'=>21,   'notnull'=>0,  'visible'=> -4,),
@@ -178,8 +175,11 @@ class BankStatement extends CommonObject
 			$conf->global->BANKSTATEMENT_DATE_FORMAT,
 			'"',
 			$conf->global->BANKSTATEMENT_SEPARATOR,
-			isset($conf->global->BANKSTATEMENT_MAC_COMPATIBILITY) ? "\r" : "\n",
-			false
+			null,
+			false,
+			array($conf->global->BANKSTATEMENT_DIRECTION_CREDIT => DIRECTION_CREDIT, $conf->global->BANKSTATEMENT_DIRECTION_DEBIT => DIRECTION_DEBIT),
+			$conf->global->BANKSTATEMENT_USE_DIRECTION,
+			$conf->global->BANKSTATEMENT_HEADER
 		);
 
 		if (empty($conf->global->MAIN_SHOW_TECHNICAL_ID) && isset($this->fields['rowid'])) $this->fields['rowid']['visible'] = 0;
@@ -228,6 +228,11 @@ class BankStatement extends CommonObject
 		return $this->createCommon($user, $notrigger);
 	}
 
+	/**
+	 * @param string $filePath
+	 * @param int    $fk_account
+	 * @return bool  True on success, False on failure
+	 */
 	public function createFromCSVFile($filePath, $fk_account)
 	{
 		/*
@@ -251,7 +256,7 @@ class BankStatement extends CommonObject
 		 * et pouvoir enregistrer des profils de configuration (associables à des comptes)
 		 *
 		*/
-		global $conf, $user;
+		global $conf, $user, $langs;
 		if (!is_file($filePath)) {
 			return false;
 		}
@@ -260,10 +265,10 @@ class BankStatement extends CommonObject
 
 		$this->ref = $this->getNextNumRef();
 
-		if ($this->create($user))
-			var_dump(sprintf('created with ID %d', $this->id));
-		else {
-			var_dump('Not created');
+		$this->db->begin();
+		if ($this->create($user) < 0) {
+			$this->db->rollback();
+			return false;
 		}
 
 		/** @var BankStatementLine[] $TBankStatementLine */
@@ -272,27 +277,48 @@ class BankStatement extends CommonObject
 
 		// Actual loading of the CSV file
 		$csvFile = fopen($filePath, 'r');
-
-		while (!feof($csvFile)) {
-			$dataRow = fgetcsv($csvFile, 4096, $this->CSVFormat->separator, $this->CSVFormat->enclosure);
-			if (empty($dataRow)) continue;
-			$line = new BankStatementLine($this->db);
-			$line->CSVFormat = $this->CSVFormat;
-
-			$line->fk_bankstatement = $this->id;
-
-			if (count($dataRow) !== count($this->CSVFormat->mapping)) {
-				$line->error = 'CSVRowFormatMismatch';
+		for ($i = 0; ($csvLine = $this->CSVFormat->getNextCSVLine($csvFile)) !== null ; $i++) {
+			if ($i === 0 && $this->CSVFormat->skipFirstLine)
+				continue;
+			// do not parse empty lines or lines with whitespace only
+			if (empty($csvLine) || preg_match('/^\s+$/', $csvLine)) {
 				continue;
 			}
-			$line->setValuesFromCSVRow($dataRow);
+
+			$line = new BankStatementLine($this->db);
+			$line->CSVFormat = $this->CSVFormat;
+			$line->fk_bankstatement = $this->id;
+			$dataRow = $this->CSVFormat->parseCSVLine($csvLine);
+			$dataRow = $this->CSVFormat->getStandardDataRow($dataRow);
+
+			if ($dataRow['error']) {
+				setEventMessages(
+					$langs->transnoentities(
+						'ErrorCSVLineFormatMismatch',
+						($i + $this->CSVFormat->skipFirstLine),
+						dol_htmlentities($csvLine) . '<br>' . $langs->trans($dataRow['error'])
+					),
+					array(),
+					'errors');
+			}
+
+			$line->setValuesFromStandardizedCSVRow($dataRow);
+
+			if ($line->create($user) < 0) {
+				setEventMessages($langs->trans('ErrorUnableToCreateBankStatementLine'), array(), 'errors');
+				continue;
+			}
+
 			if ($line->error) {
 				$TBankStatementInvalidLine[] = $line;
 			} else {
 				$TBankStatementLine[] = $line;
 			}
-			var_dump($line->getFieldValues(), $line->id);
-			$line->create($user);
+		}
+		if (empty($TBankStatementInvalidLine) && !empty($TBankStatementLine)) {
+			$this->db->commit();
+		} else {
+			$this->db->rollback();
 		}
 
 		return true;
@@ -344,7 +370,6 @@ class BankStatement extends CommonObject
 				$shortkey = preg_replace('/options_/', '', $key);
 				if (!empty($extrafields->attributes[$this->element]['unique'][$shortkey]))
 				{
-					//var_dump($key); var_dump($clonedObj->array_options[$key]); exit;
 					unset($object->array_options[$key]);
 				}
 			}
@@ -834,23 +859,49 @@ class BankStatement extends CommonObject
 	public function LibStatut($status, $mode = 0)
 	{
 		// phpcs:enable
+
 		if (empty($this->labelStatus) || empty($this->labelStatusShort))
 		{
 			global $langs;
-			//$langs->load("bankstatement");
-			$this->labelStatus[self::STATUS_DRAFT] = $langs->trans('Draft');
-			$this->labelStatus[self::STATUS_VALIDATED] = $langs->trans('Enabled');
-			$this->labelStatus[self::STATUS_CANCELED] = $langs->trans('Disabled');
-			$this->labelStatusShort[self::STATUS_DRAFT] = $langs->trans('Draft');
-			$this->labelStatusShort[self::STATUS_VALIDATED] = $langs->trans('Enabled');
-			$this->labelStatusShort[self::STATUS_CANCELED] = $langs->trans('Disabled');
+			foreach($this->fields['status']['arrayofkeyval'] as $key => $val) {
+				$this->labelStatus[$key] = $langs->trans($val);
+			}
 		}
 
 		$statusType = 'status'.$status;
-		//if ($status == self::STATUS_VALIDATED) $statusType = 'status1';
-		if ($status == self::STATUS_CANCELED) $statusType = 'status6';
 
-		return dolGetStatus($this->labelStatus[$status], $this->labelStatusShort[$status], '', $statusType, $mode);
+		return dolGetStatus($this->labelStatus[$status], $this->labelStatus[$status], '', $statusType, $mode);
+	}
+
+	/**
+	 * @param string $action   Keyword for the action to be performed (e.g. 'delete', 'modify', etc.)
+	 * @param bool   $disabled Whether to show a non-clickable, greyed-out button or a link
+	 * @return string  A HTML <a> or <span> element (depending on $disabled)
+	 */
+	public function getActionButton($action, $disabled=false)
+	{
+		global $langs;
+		$btnLabel = $langs->trans(ucfirst($action));
+		$urlParameters = array();
+
+		switch($action) {
+			case 'delete':
+				$btnClass = 'butActionDelete';
+				break;
+			default:
+				$btnClass = 'butAction';
+				$urlParameters['action'] = $action;
+				$urlParameters['id']     = $this->id;
+		}
+		$actionUrl = $_SERVER['PHP_SELF'] . '?' . http_build_query($urlParameters);
+
+		// if the user is not allowed to perform the action (or the button is disabled for any reason),
+		// do not display a link
+		if ($disabled) {
+			return sprintf('<span class="butActionRefused">%s</span>', $btnLabel);
+		} else {
+			return sprintf('<a href="%s" class="%s">%s</a>', $actionUrl, $btnClass, $btnLabel);
+		}
 	}
 
 	/**
@@ -1182,7 +1233,7 @@ class BankStatement extends CommonObject
 			},
 			$fieldsToShow
 		);
-		$lineTypeClass = ($line->type === $line::TYPE_CREDIT) ? 'credit' : 'debit';
+		$lineTypeClass = ($line->direction === $line::DIRECTION_CREDIT) ? 'credit' : 'debit';
 
 		echo '<tr id="row-'.intval($i).'" class="' . $lineTypeClass . '_line" data-element="bankstatementdet" data-id="'.intval($line->id).'">' . "\n"
 			 . join("\n", $THtmlRow)
@@ -1191,18 +1242,35 @@ class BankStatement extends CommonObject
 }
 
 /**
- * Simple data class for holding details of a CSV format variant (like the column separator etc.)
- * Class BankStatementFormat
+ * Simple data class for handling details of a CSV format variant (like the column separator etc.)
+ *
+ * Its role is only to turn various CSV formats into standardized bank transaction arrays with:
+ *  - 'date'      date of transaction
+ *  - 'label'     transaction label / reference
+ *  - 'amount'    transaction amount (absolute value)
+ *  - 'direction' direction of the transaction (-1 for debit, +1 for credit)
+ *
+ * See the samples/ directory for sample CSV formats that can be parsed.
+ * It is not meant to perform any business logic beyond interpreting CSV.
  */
 class BankStatementFormat
 {
-	public $mapping    = 'date;label;credit;debit';
-	public $dateFormat = 'Y-m-d';
-	public $enclosure  = '"';
-	public $separator  = ';';
-	public $lineEnding = "\n";
-	public $columnMode = false;
-	public function __construct($mapping, $dateFormat, $enclosure, $separator, $lineEnding, $columnMode)
+	public $mapping          = array('date', 'label', 'credit', 'debit');
+	public $dateFormat       = 'Y-m-d';
+	public $enclosure        = '"';
+	public $separator        = ';';
+	public $lineEnding       = null; // NULL means stream_get_line will split at '\n', '\r' and '\r\n' (https://www.php.net/manual/en/function.stream-get-line.php)
+	public $maxRowSize       = 4096;
+	public $escape           = '\\';
+	public $columnMode       = false;
+	public $directionMapping = array('credit' => DIRECTION_CREDIT, 'debit' => DIRECTION_DEBIT);
+	public $useDirection     = false;
+	public $skipFirstLine    = true;
+
+	// internal CSV string buffering
+	private $TFullLines = array(); // stores full CSV lines as string until they are read
+	private $lineBuffer = '';      // internal buffer for leftover bytes from the fread() call that might not be a full line
+	public function __construct($mapping, $dateFormat, $enclosure, $separator, $lineEnding, $columnMode, $directionMapping, $useDirection, $skipFirstLine)
 	{
 		$this->mapping    = explode(';', $mapping);
 		$this->dateFormat = $dateFormat;
@@ -1210,5 +1278,163 @@ class BankStatementFormat
 		$this->separator  = $separator;
 		$this->lineEnding = $lineEnding;
 		$this->columnMode = $columnMode;
+		$this->directionMapping = $directionMapping;
+		$this->useDirection     = $useDirection;
+		$this->skipFirstLine    = $skipFirstLine;
+	}
+
+	/**
+	 * @param resource  $csvFile  An open CSV file
+	 * @param boolean   $isFirst  Whether this is the first line read from the CSV
+	 * @return string|null        Null when feof is reached
+	 */
+	public function getNextCSVLine($csvFile)
+	{
+		$ending = $this->lineEnding ? '#' . $this->lineEnding . '#' :  "#(\\r\\n|\\r|\\n)#";
+		if (count($this->TFullLines)) {
+			return array_shift($this->TFullLines);
+		} elseif (feof($csvFile)) {
+			return null;
+		} else {
+			while (count($lines = preg_split($ending, $this->lineBuffer)) === 1 && !feof($csvFile)) {
+				$this->lineBuffer .= fread($csvFile, $this->maxRowSize);
+			}
+			$this->lineBuffer = array_pop($lines);
+			if ($lines) $this->TFullLines += $lines;
+			return array_shift($this->TFullLines);
+		}
+	}
+
+	/**
+	 * @param $csvLine
+	 * @return array
+	 */
+	public function parseCSVLine($csvLine)
+	{
+		return str_getcsv($csvLine, $this->separator, $this->enclosure, $this->escape);
+	}
+
+	/**
+	 *
+	 * @param $dataRow
+	 * @return array
+	 */
+	public function getStandardDataRow($dataRow)
+	{
+		global $langs;
+		$standardRow = array(
+			'date' => null,
+			'label' => null,
+			'amount' => null,
+			'direction' => null,
+			'error' => ''
+		);
+
+		if (count($this->mapping) !== count($dataRow)) {
+			$standardRow['error'] = $langs->trans('ErrorCSVColumnCountMismatch', count($this->mapping), count($dataRow));
+			return $standardRow;
+		}
+		$combinedRow = array_combine($this->mapping, $dataRow);
+		if (!empty($combinedRow['date'])) {
+			$standardRow['date'] = DateTime::createFromFormat(
+				$this->dateFormat,
+				$combinedRow['date']
+			);
+		}
+		// must happen once in a billion, but let’s account for the possibility that the CSV line has the date '1970-01-01'
+		$CSVDateIsEpoch = isset($combinedRow['date']) && $combinedRow['date'] === date($this->dateFormat, 0);
+
+		if (!empty($standardRow['date']) || $CSVDateIsEpoch) {
+			$standardRow['date']->setTime(0, 0, 0);
+			$standardRow['date'] = $standardRow['date']->getTimestamp();
+		} else {
+			$standardRow['error'] = 'ErrorBankStatementLineHasNoDate';
+			return $standardRow;
+		}
+
+		if (isset($combinedRow['label'])) $standardRow['label'] = $combinedRow['label'];
+
+		// Depending on format configuration, use one of several specialized methods to
+		// get 'amount' and 'direction'
+		if (in_array('amount', $this->mapping)) {
+			if ($this->useDirection) {
+				$this->standardizeAmountDirectionDataRow($standardRow, $combinedRow);
+			} else {
+				$this->standardizeSignedAmountDataRow($standardRow, $combinedRow);
+			}
+		} else {
+			$this->standardizeCreditDebitDataRow($standardRow, $combinedRow);
+		}
+
+		return $standardRow;
+	}
+
+	/**
+	 * Set keys 'amount' and 'direction' of a standard row using 'credit' and 'debit' from
+	 * the unprocessed $combinedRow
+	 * @param $standardRow
+	 * @param $combinedRow
+	 */
+	public function standardizeCreditDebitDataRow(&$standardRow, $combinedRow)
+	{
+		$hasCredit = !empty($combinedRow['credit']);
+		$hasDebit  = !empty($combinedRow['debit']);
+
+		if ($hasCredit XOR $hasDebit) {
+			// either debit or credit is set, but not both = OK
+			if ($hasCredit) {
+				$standardRow['direction'] = DIRECTION_CREDIT;
+				$standardRow['amount'] = doubleval(price2num($combinedRow['credit']));
+			} else {
+				$standardRow['direction'] = DIRECTION_DEBIT;
+				$standardRow['amount'] = doubleval(price2num($combinedRow['debit' ]));
+			}
+		} elseif ($hasCredit && $hasDebit) {
+			// both set = error
+			$standardRow['error'] = 'ErrorBankStatementLineHasBothDebitAndCredit';
+		} else {
+			// both unset = error
+			$standardRow['error'] = 'ErrorBankStatementLineHasNeitherDebitAndCredit';
+		}
+	}
+
+	/**
+	 * Set keys 'amount' and 'direction' of a standard row using 'amount' and 'direction' from
+	 * the unprocessed $combinedRow
+	 * @param $standardRow
+	 * @param $combinedRow
+	 */
+	public function standardizeAmountDirectionDataRow(&$standardRow, $combinedRow)
+	{
+		$hasAmount = !empty($combinedRow['amount']);
+		$hasType   = !empty($combinedRow['direction']);
+		if (!$hasAmount || !$hasType) {
+			$standardRow['error'] = 'ErrorBankStatementLineHasNoAmountOrType';
+		}
+		$standardRow['amount'] = doubleval(price2num($combinedRow['amount']));
+		if (array_key_exists($combinedRow['direction'], $this->directionMapping)) {
+			$standardRow['direction'] = $this->directionMapping[$combinedRow['direction']];
+		} else {
+			$standardRow['error'] = 'ErrorInvalidBankStatementDirectionValue';
+		}
+	}
+
+	/**
+	 * Set keys 'amount' and 'direction' of a standard row using a raw (signed) amount.
+	 * @param $standardRow
+	 * @param $combinedRow
+	 */
+	public function standardizeSignedAmountDataRow(&$standardRow, $combinedRow)
+	{
+		$hasAmount = !empty($combinedRow['amount']);
+		if (!$hasAmount) {
+			$standardRow['error'] = 'ErrorBankStatementLineHasNoAmount';
+		}
+		$rawAmount = doubleval(price2num($combinedRow['amount']));
+		if (!$rawAmount) {
+			$standardRow['error'] = 'ErrorBankStatementAmountIsZero';
+		}
+		$standardRow['amount'] = abs($rawAmount);
+		$standardRow['direction'] = getAmountType($rawAmount);
 	}
 }
