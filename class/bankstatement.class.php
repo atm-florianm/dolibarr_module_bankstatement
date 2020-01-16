@@ -236,16 +236,16 @@ class BankStatement extends CommonObject
 	public function createFromCSVFile($filePath, $fk_account)
 	{
 		/*
-		TODO: gérer formats particuliers :
-		 * - format mac (les "\n" sont remplacés par des "\r") => il suffit de faire le remplacement inverse
+		 * Formats gérés :
+		 * ☑ format mac (les "\n" sont remplacés par des "\r") => il suffit de faire le remplacement inverse
 		 *      tester avec samples/mac-sample.csv
-		 * - format "direction" : au lieu d’avoir une colonne débit et une colonne crédit, on a une colonne
+		 * ☑ format "montant + direction" : au lieu d’avoir une colonne débit et une colonne crédit, on a une colonne
 		 *   "montant" et une colonne "direction" : la colonne direction indique si c’est un débit ou un
 		 *   crédit
 		 *      tester avec samples/direction-sample.csv
-		 * - format "direction" simple (facile) : une colonne "montant" avec un montant positif ou négatif
-		 *      tester avec samples/???
-		 * - format "colonnes" : ce n’est même pas un format CSV (ou plutôt c’est comme un CSV renversé)
+		 * ☑ format "montant signé" : une colonne "montant" avec un montant positif ou négatif
+		 *      tester avec ../samples/signed-amount-sample.csv
+		 * ☐ TODO format "colonnes" : ce n’est même pas un format CSV (ou plutôt c’est comme un CSV renversé)
 		 *      tester avec samples/colonnes-sample.csv
 		 *
 		 * Dans l’ancien module, le format Mac est spécifié par une conf.
@@ -1252,6 +1252,8 @@ class BankStatement extends CommonObject
  *
  * See the samples/ directory for sample CSV formats that can be parsed.
  * It is not meant to perform any business logic beyond interpreting CSV.
+ * TODO: save its values somewhere (within a bank account extrafield?) to
+ * provide per-account CSV formats
  */
 class BankStatementFormat
 {
