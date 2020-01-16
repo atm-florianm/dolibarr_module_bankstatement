@@ -1124,7 +1124,7 @@ class BankStatement extends CommonObject
 	 * @param  string|int	$morecss       Value for css to define style/length of field. May also be a numeric.
 	 * @return string
 	 */
-	public function showInputField($val, $key, $value, $moreparam = '', $keysuffix = '', $keyprefix = '', $morecss = 0)
+	public function showInputField($val, $key, $value, $moreparam = '', $keysuffix = '', $keyprefix = '', $morecss = 0, $nonewbutton = 0)
 	{
 		switch($key)
 		{
@@ -1137,7 +1137,7 @@ class BankStatement extends CommonObject
 			case 'status':
 				return '';
 			default:
-				return parent::showInputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss);
+				return parent::showInputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss, $nonewbutton);
 		}
 	}
 
