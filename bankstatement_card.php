@@ -170,7 +170,7 @@ $(()=>{
 
 
 // action 'create' = display the creation form
-if ($action == 'create') {
+if ($action === 'create') {
 	print load_fiche_titre($langs->trans("NewObject", $langs->transnoentitiesnoconv("BankStatement")));
 	print '<form method="POST" enctype="multipart/form-data" action="'.$_SERVER["PHP_SELF"].'">';
 	print '<input type="hidden" name="token" value="'.newToken().'">';
@@ -212,13 +212,44 @@ if ($action == 'create') {
 
 	dol_set_focus('input[name="label"]');
 }
-elseif ($action == 'add') {
+elseif ($action === 'add') {
 	$filename = GETPOST('CSVFile', 'alpha');
 	if (isset($_FILES['CSVFile'])) {
 		$filePath = $_FILES['CSVFile']['tmp_name'];
 		$object->label = GETPOST('label', 'alpha');
 		$object->createFromCSVFile($filePath, GETPOST('fk_account', 'int'));
 	}
+}
+elseif ($action === 'reconcile') {
+	// TODO : écran de rapprochement
+	print load_fiche_titre($langs->trans("BankStatement"));
+	$sqlSelect = array('b.rowid', 'b.label', 'b.rappro', 'b.num_releve', 'b.fk_account', 'b.amount', 'b.datev', 'b.dateo');
+	$sql = 'SELECT ' . join(', ', $sqlSelect) .' FROM ' . MAIN_DB_PREFIX . 'bank AS b'
+		. ' WHERE b.fk_account = ' . $object->fk_account . ';';
+	$resql = $db->query($sql);
+	echo '<table class="border centpercent">';
+	echo '<thead>';
+	printf(
+		'<tr class="liste_titre"><th>%s</th> <th>%s</th>',
+		$langs->trans('Label'),
+		$langs->trans('Amount')
+	);
+	echo '</thead>';
+	echo '<tbody>';
+
+	if ($resql) {
+		$n = $db->num_rows($resql);
+		for ($i = 0; $i < $n; $i++) {
+			$obj = $db->fetch_object($resql);
+			printf(
+				'<tr><td>%s</td> <td>%s</td></tr>',
+				$obj->label,
+				$obj->amount
+			);
+		}
+	}
+	echo '</tbody>';
+	echo '</table>';
 }
 
 // Part to edit record
