@@ -155,7 +155,7 @@ class modBankStatement extends DolibarrModules
 			'titre'=>'LeftMenuBankStatement',
 			'mainmenu'=>'bank',
 			'leftmenu'=>'bankstatement',
-			'url'=>'/bankstatement/bankstatement_card.php?action=create',
+			'url'=>'/bankstatement/bankstatement_list.php',
 			'langs'=>'bankstatement@bankstatement',
 			'position'=>100,
 			'enabled'=>'$conf->bankstatement->enabled',

@@ -1102,6 +1102,92 @@ class BankStatement extends CommonObject
 				return parent::showOutputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss);
 		}
 	}
+
+	/**
+	 *	Return HTML table for object lines
+	 *	TODO Move this into an output class file (htmlline.class.php)
+	 *	If lines are into a template, title must also be into a template
+	 *	But for the moment we don't know if it's possible as we keep a method available on overloaded objects.
+	 *
+	 *	@param	string		$action				Action code
+	 *	@param  string		$seller            	Object of seller third party
+	 *	@param  string  	$buyer             	Object of buyer third party
+	 *	@param	int			$selected		   	Object line selected
+	 *	@param  int	    	$dateSelector      	1=Show also date range input fields
+	 *  @param	string		$defaulttpldir		Directory where to find the template
+	 *	@return	void
+	 */
+	public function printObjectLines($action, $seller, $buyer, $selected = 0, $dateSelector = 0, $defaulttpldir = '/core/tpl')
+	{
+		global $langs;
+//		return parent::printObjectLines($action, $seller, $buyer, $selected, $dateSelector, $defaulttpldir);
+		$fieldsToShow = array('date', 'label', 'credit', 'debit');
+		$TTh = array_map(function($key) use ($langs) {
+			return '<th class="linecol"' . $key . '>' . $langs->trans(ucfirst($key)) . '</th>';
+		}, $fieldsToShow);
+		?>
+		<table id="tablelines" class="noborder noshadow" width="100%">
+			<thead>
+			<tr class="liste_titre nodrag nodrop">
+				<?php echo join("\n", $TTh) ?>
+			</tr>
+			</thead>
+			<tbody>
+			<?php
+			$i=0;
+			foreach ($this->lines as $line) {
+				$this->printObjectLine('show', $line, '', '', $i++, '', '', '', '', null, '');
+			}
+			?>
+			</tbody>
+		</table>
+
+		<?php
+	}
+	/**
+	 * Overrides CommonObject::printObjectLine
+	 *	Return HTML content of a detail line
+	 *	TODO Move this into an output class file (htmlline.class.php)
+	 *
+	 *	@param	string      		$action				GET/POST action
+	 *	@param  BankStatementLine 	$line			    Selected object line to output
+	 *	@param  string	    		$var               	Is it a an odd line (true)
+	 *	@param  int		    		$num               	Number of line (0)
+	 *	@param  int		    		$i					I
+	 *	@param  int		    		$dateSelector      	1=Show also date range input fields
+	 *	@param  string	    		$seller            	Object of seller third party
+	 *	@param  string	    		$buyer             	Object of buyer third party
+	 *	@param	int					$selected		   	Object line selected
+	 *  @param  Extrafields			$extrafields		Object of extrafields
+	 *  @param	string				$defaulttpldir		Directory where to find the template
+	 *	@return	void
+	 */
+	public function printObjectLine($action, $line, $var, $num, $i, $dateSelector, $seller, $buyer, $selected = 0, $extrafields = null, $defaulttpldir = '/core/tpl')
+	{
+//		return parent::printObjectLine($action, $line, $var, $num, $i, $dateSelector, $seller, $buyer, $selected, $extrafields, $defaulttpldir);
+//		global $conf, $langs, $user, $object, $hookmanager;
+//		global $form;
+//		global $object_rights, $disableedit, $disablemove, $disableremove;
+
+		$fieldDisplayMethod = 'showOutputField';
+		if ($action === 'editline') {
+			$fieldDisplayMethod = 'showInputField';
+		}
+		$fieldsToShow = array('date', 'label', 'credit', 'debit');
+		$THtmlRow = array_map(
+			function ($fieldKey) use ($line, $fieldDisplayMethod) {
+				return '<td class="linecol' . $fieldKey . '">'
+					   . $line->{$fieldDisplayMethod}($line->getFieldDefinition($fieldKey), $fieldKey, $line->{$fieldKey})
+					   . '</td>';
+			},
+			$fieldsToShow
+		);
+		$lineTypeClass = ($line->type === $line::TYPE_CREDIT) ? 'credit' : 'debit';
+
+		echo '<tr id="row-'.intval($i).'" class="' . $lineTypeClass . '_line" data-element="bankstatementdet" data-id="'.intval($line->id).'">' . "\n"
+			 . join("\n", $THtmlRow)
+			 . '</tr>' . "\n";
+	}
 }
 
 /**

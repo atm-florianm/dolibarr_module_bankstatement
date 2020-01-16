@@ -63,9 +63,14 @@ class BankStatementLine extends CommonObjectLine
 	public $fk_bankstatement;
 	// END MODULEBUILDER PROPERTIES
 
+	// not from module builder: these definitions will help display the 'credit' and 'debit' field
+	public $dynamicFields = array(
+		'credit' => array('type' => 'double(24,8)', 'label'=>'Credit', 'enabled'=>1, 'visible'=>1),
+		'debit'  => array('type' => 'double(24,8)', 'label'=>'Debit',  'enabled'=>1, 'visible'=>1),
+	);
+
 	/** @var float $credit */
 	public $credit;
-
 	/** @var float $debit */
 	public $debit;
 
@@ -126,6 +131,24 @@ class BankStatementLine extends CommonObjectLine
 	}
 
 	/**
+	 * Extends CommonObject::setVarsFromFetchObj for BankStatementLine:
+	 * set credit and debit values from amount and type.
+	 * @param stdClass $obj
+	 */
+	public function setVarsFromFetchObj(&$obj)
+	{
+		parent::setVarsFromFetchObj($obj);
+		switch ($this->type) {
+			case self::TYPE_CREDIT:
+				$this->credit = $this->amount;
+				break;
+			case self::TYPE_DEBIT:
+				$this->debit = $this->amount;
+				break;
+		}
+	}
+
+	/**
 	 * Create object into database
 	 *
 	 * @param  User $user      User that creates
@@ -157,6 +180,20 @@ class BankStatementLine extends CommonObjectLine
 		}
 		$ret['error'] = $this->error;
 		return $ret;
+	}
+
+	/**
+	 * @param string $fieldKey
+	 * @return array
+	 */
+	public function getFieldDefinition($fieldKey)
+	{
+		if (isset($this->fields[$fieldKey]))
+			return $this->fields[$fieldKey];
+		if (isset($this->dynamicFields[$fieldKey]))
+			return $this->dynamicFields[$fieldKey];
+		global $langs;
+		setEventMessages($langs->trans('ErrorFieldNotFound', $fieldKey), array(), 'errors');
 	}
 
 	/**

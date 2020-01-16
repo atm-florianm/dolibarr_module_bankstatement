@@ -34,3 +34,9 @@ else header('Cache-Control: no-cache');
 #setupConfValueColumn {	} /* Value <col> of setup page table */
 
 
+.credit_line > td.linecolcredit {
+	color: green;
+}
+.debit_line > td.linecoldebit {
+	color: red;
+}
