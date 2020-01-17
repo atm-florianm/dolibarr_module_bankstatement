@@ -64,9 +64,9 @@ function bankstatementPrepareHead($object)
 	$head[$h][2] = 'document';
 	$h++;
 
-	$head[$h][0] = dol_buildpath("/bankstatement/bankstatement_agenda.php", 1).'?id='.$object->id;
-	$head[$h][1] = $langs->trans("Events");
-	$head[$h][2] = 'agenda';
+	$head[$h][0] = dol_buildpath("/bankstatement/bankstatement_reconcile.php", 1).'?id='.$object->id;
+	$head[$h][1] = $langs->trans("Reconcile");
+	$head[$h][2] = 'reconcile'; // => <a id="reconcile" […]></a>
 	$h++;
 
 	// Show more tabs from modules

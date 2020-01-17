@@ -24,20 +24,21 @@ BankStatementAboutPage = À propos du module Import de relevés de banque
 About = À propos
 
 # Objects
-BankStatements=Relevés
+BankStatements=relevés
+BankStatementLines=transactions
 BankStatementLigne=Ligne de relevé
 
 # Menus
-LeftMenuBankStatement=Import de relevés
+LeftMenuBankStatement_overview=Transactions importées
+LeftMenuBankStatement_list=Liste des relevés
 LeftMenuBankStatement_create=<span title="Pour importer un relevé">Importer un relevé</span>
-LeftMenuBankStatement_overview=Lignes <i>importées</i>
 
 # Setup
 BankStatementSetup = Configuration du module Import de relevés de banque
 BankStatementSetupPage = Ici, vous pouvez configurer le module Import de relevés de banque. N’oubliez pas de sauvegarder chacune de vos modifications.
-ValueSaved = Valeur enregistrée :
-ValueUnchanged = Aucun changement depuis la dernière sauvegarde
-NoValueToSave=Aucune valeur modifiée
+ValueSaved=Option enregistrée :
+ValueUnchanged=Option déjà enregistrée
+NoValueToSave=Toutes les options sont déjà enregistrées
 Settings = Réglages
 
 # Module rights
@@ -100,7 +101,9 @@ UserImport=Utilisateur ayant réalisé l’import
 DateImport=Date d’import
 UserReconcile=Utilisateur ayant réalisé le rapprochement
 DateReconcile=Date du rapprochement
-DateStart=Date
+
+DateStart=Date de la première transaction
+DateEnd = Date de la dernière transaction
 
 # Actions
 Reconcile = Rapprocher

@@ -257,4 +257,27 @@ class BankStatementLine extends CommonObjectLine
 			return -1;
 		}
 	}
+
+	public function getLibStatut($mode=0)
+	{
+		return $this->LibStatut($this->status, $mode);
+	}
+
+	public function LibStatut($status, $mode)
+	{
+		// phpcs:enable
+
+		if (empty($this->labelStatus) || empty($this->labelStatusShort))
+		{
+			global $langs;
+			foreach($this->fields['status']['arrayofkeyval'] as $key => $val) {
+				$this->labelStatus[$key] = $langs->trans($val);
+			}
+		}
+
+		$statusType = 'status'.$status;
+
+		return dolGetStatus($this->labelStatus[$status], $this->labelStatus[$status], '', $statusType, $mode);
+	}
+
 }

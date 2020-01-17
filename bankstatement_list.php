@@ -94,6 +94,12 @@ $pagenext = $page + 1;
 // Initialize technical objects
 $object = new BankStatement($db);
 $extrafields = new ExtraFields($db);
+$title = $langs->trans('ListOf', $langs->transnoentitiesnoconv("BankStatements"));
+$objectclass = 'BankStatement';
+$objectlabel = 'BankStatement';
+if (!$sortfield) $sortfield = 't.date_import';
+if (!$sortorder) $sortorder = 'DESC';
+
 $diroutputmassaction = $conf->bankstatement->dir_output.'/temp/massgeneration/'.$user->id;
 $hookmanager->initHooks(array('bankstatementlist')); // Note that conf->hooks_modules contains array
 
@@ -137,7 +143,13 @@ $arrayfields=array();
 foreach($object->fields as $key => $val)
 {
 	// If $val['visible']==0, then we never show the field
-	if (!empty($val['visible'])) $arrayfields['t.'.$key]=array('label'=>$val['label'], 'checked'=>(($val['visible']<0)?0:1), 'enabled'=>($val['enabled'] && ($val['visible'] != 3)), 'position'=>$val['position']);
+	if (!empty($val['visible']))
+		$arrayfields['t.'.$key]=array(
+			'label'=>$val['label'],
+			'checked'=>(($val['visible']<0)?0:1),
+			'enabled'=>($val['enabled'] && ($val['visible'] != 3)),
+			'position'=>$val['position']
+		);
 }
 // Extra fields
 if (is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label']) > 0)
@@ -195,8 +207,6 @@ if (empty($reshook))
 	}
 
 	// Mass actions
-	$objectclass = 'BankStatement';
-	$objectlabel = 'BankStatement';
 	$uploaddir = $conf->bankstatement->dir_output;
 	include DOL_DOCUMENT_ROOT.'/core/actions_massactions.inc.php';
 }
@@ -213,7 +223,6 @@ $now = dol_now();
 
 //$help_url="EN:Module_BankStatement|FR:Module_BankStatement_FR|ES:Módulo_BankStatement";
 $help_url = '';
-$title = $langs->trans('ListOf', $langs->transnoentitiesnoconv("BankStatements"));
 
 
 // Build and execute select
@@ -346,10 +355,7 @@ include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_param.tpl.php';
 
 // List of mass actions available
 $arrayofmassactions = array(
-    //'validate'=>$langs->trans("Validate"),
-    //'generate_doc'=>$langs->trans("ReGeneratePDF"),
-    //'builddoc'=>$langs->trans("PDFMerge"),
-    //'presend'=>$langs->trans("SendByMail"),
+	'delete'=>$langs->trans('Delete'),
 );
 if ($permissiontodelete) $arrayofmassactions['predelete'] = '<span class="fa fa-trash paddingrightonly"></span>'.$langs->trans("Delete");
 if (GETPOST('nomassaction', 'int') || in_array($massaction, array('presend', 'predelete'))) $arrayofmassactions = array();
@@ -452,7 +458,17 @@ foreach ($object->fields as $key => $val)
 	elseif (in_array($val['type'], array('double(24,8)', 'double(6,3)', 'integer', 'real', 'price')) && $val['label'] != 'TechnicalID') $cssforfield .= ($cssforfield ? ' ' : '').'right';
 	if (!empty($arrayfields['t.'.$key]['checked']))
 	{
-		print getTitleFieldOfList($arrayfields['t.'.$key]['label'], 0, $_SERVER['PHP_SELF'], 't.'.$key, '', $param, ($cssforfield ? 'class="'.$cssforfield.'"' : ''), $sortfield, $sortorder, ($cssforfield ? $cssforfield.' ' : ''))."\n";
+		print getTitleFieldOfList(
+			$arrayfields['t.'.$key]['label'],
+			0,
+			$_SERVER['PHP_SELF'],
+			't.'.$key,
+			'',
+			$param,
+			($cssforfield ? 'class="'.$cssforfield.'"' : ''),
+			$sortfield,
+			$sortorder,
+			($cssforfield ? $cssforfield.' ' : ''))."\n";
 	}
 }
 // Extra fields

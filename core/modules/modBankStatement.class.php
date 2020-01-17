@@ -91,7 +91,7 @@ class modBankStatement extends DolibarrModules
 			'barcode'       => 0,                               // Set this to 1 if module has its own barcode directory (core/modules/barcode)
 			'models'        => 0,                               // Set this to 1 if module has its own models directory (core/modules/xxx)
 			'css' => array('/bankstatement/css/bankstatement.css.php'),	// Set this to relative path of css file if module has its own css file
-			'js' => array('/bankstatement/js/bankstatement.js.php'),    // Set this to relative path of js file if module must load a js on all pages
+			'js'  => array('/bankstatement/js/bankstatement.js.php'),   // Set this to relative path of js file if module must load a js on all pages
 			'hooks' => array(),                                 // Set here all hooks context managed by module. To find available hook context, make a "grep -r '>initHooks(' *" on source code. You can also set hook context 'all'
 			'moduleforexternal' => 0                            // Set this to 1 if feature of module are opened to external users
 		);
@@ -152,10 +152,10 @@ class modBankStatement extends DolibarrModules
 		$this->menu[$r]=array(
 			'fk_menu'=>'fk_mainmenu=bank',
 			'type'=>'left',
-			'titre'=>'LeftMenuBankStatement',
+			'titre'=>'LeftMenuBankStatement_overview',
 			'mainmenu'=>'bank',
 			'leftmenu'=>'bankstatement',
-			'url'=>'/bankstatement/bankstatement_list.php',
+			'url'=>'/bankstatement/bankstatement_card.php?action=view',
 			'langs'=>'bankstatement@bankstatement',
 			'position'=>100,
 			'enabled'=>'$conf->bankstatement->enabled',
@@ -169,8 +169,23 @@ class modBankStatement extends DolibarrModules
 			'type'=>'left',
 			'titre'=>'LeftMenuBankStatement_create',
 			'mainmenu'=>'bank',
-			'leftmenu'=>'bankstatement',
+			'leftmenu'=>'bankstatement_create',
 			'url'=>'/bankstatement/bankstatement_card.php?action=create',
+			'langs'=>'bankstatement@bankstatement',
+			'position'=>100,
+			'enabled'=>'$conf->bankstatement->enabled',
+			'perms'=>'$user->rights->bankstatement->read',
+			'target'=>'',
+			'user'=>0
+		);
+		$r++;
+		$this->menu[$r]=array(
+			'fk_menu'=>'fk_mainmenu=bank,fk_leftmenu=bankstatement',
+			'type'=>'left',
+			'titre'=>'LeftMenuBankStatement_list',
+			'mainmenu'=>'bank',
+			'leftmenu'=>'bankstatement_overview',
+			'url'=>'/bankstatement/bankstatement_list.php',
 			'langs'=>'bankstatement@bankstatement',
 			'position'=>100,
 			'enabled'=>'$conf->bankstatement->enabled',

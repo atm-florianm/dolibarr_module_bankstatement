@@ -55,13 +55,13 @@ dol_include_once('/bankstatement/lib/bankstatement_bankstatement.lib.php');
 $langs->loadLangs(array("bankstatement@bankstatement", "other"));
 
 // Get parameters
-$id = GETPOST('id', 'int');
-$ref        = GETPOST('ref', 'alpha');
-$action = GETPOST('action', 'aZ09');
-$confirm    = GETPOST('confirm', 'alpha');
-$cancel     = GETPOST('cancel', 'aZ09');
-$contextpage = GETPOST('contextpage', 'aZ') ?GETPOST('contextpage', 'aZ') : 'bankstatementcard'; // To manage different context of search
-$backtopage = GETPOST('backtopage', 'alpha');
+$id          = GETPOST('id', 'int');
+$ref         = GETPOST('ref', 'alpha');
+$action      = GETPOST('action', 'aZ09');
+$confirm     = GETPOST('confirm', 'alpha');
+$cancel      = GETPOST('cancel', 'aZ09');
+$contextpage = GETPOST('contextpage', 'aZ'); if (empty($contextpage)) $contextpage = 'bankstatementcard'; // To manage different context of search
+$backtopage  = GETPOST('backtopage', 'alpha');
 $backtopageforcancel = GETPOST('backtopageforcancel', 'alpha');
 //$lineid   = GETPOST('lineid', 'int');
 
@@ -295,50 +295,47 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 	$head = bankstatementPrepareHead($object);
 	dol_fiche_head($head, 'card', $langs->trans("BankStatement"), -1, $object->picto);
 
-	$formconfirm = '';
+	// show confirmation pop-in for certain actions
+	$actionsRequiringConfirmation = array('delete', 'deleteline');
+	if (in_array($action, $actionsRequiringConfirmation, true)) {
+		$formconfirm = '';
 
-	// Confirmation to delete
-	if ($action == 'delete')
-	{
-		$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"].'?id='.$object->id, $langs->trans('DeleteBankStatement'), $langs->trans('ConfirmDeleteObject'), 'confirm_delete', '', 0, 1);
-	}
-	// Confirmation to delete line
-	if ($action == 'deleteline')
-	{
-		$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"].'?id='.$object->id.'&lineid='.$lineid, $langs->trans('DeleteLine'), $langs->trans('ConfirmDeleteLine'), 'confirm_deleteline', '', 0, 1);
-	}
-	// Clone confirmation
-	if ($action == 'clone') {
-		// Create an array for form
-		$formquestion = array();
-		$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"].'?id='.$object->id, $langs->trans('ToClone'), $langs->trans('ConfirmCloneBankStatement', $object->ref), 'confirm_clone', $formquestion, 'yes', 1);
-	}
+		// Confirmation to delete
+		if ($action === 'delete')
+		{
+			$formconfirm = $form->formconfirm(
+				$_SERVER["PHP_SELF"].'?id='.$object->id,
+				$langs->trans('DeleteBankStatement'),
+				$langs->trans('ConfirmDeleteObject'),
+				'confirm_delete',
+				'',
+				0,
+				1
+			);
+		}
+		// Confirmation to delete line
+		if ($action === 'deleteline')
+		{
+			$formconfirm = $form->formconfirm(
+				$_SERVER["PHP_SELF"].'?id='.$object->id.'&lineid='.$lineid,
+				$langs->trans('DeleteLine'),
+				$langs->trans('ConfirmDeleteLine'),
+				'confirm_deleteline',
+				'',
+				0,
+				1
+			);
+		}
 
-	// Confirmation of action xxxx
-	if ($action == 'xxx')
-	{
-		$formquestion = array();
-		/*
-		$forcecombo=0;
-		if ($conf->browser->name == 'ie') $forcecombo = 1;	// There is a bug in IE10 that make combo inside popup crazy
-		$formquestion = array(
-			// 'text' => $langs->trans("ConfirmClone"),
-			// array('type' => 'checkbox', 'name' => 'clone_content', 'label' => $langs->trans("CloneMainAttributes"), 'value' => 1),
-			// array('type' => 'checkbox', 'name' => 'update_prices', 'label' => $langs->trans("PuttingPricesUpToDate"), 'value' => 1),
-			// array('type' => 'other',    'name' => 'idwarehouse',   'label' => $langs->trans("SelectWarehouseForStockDecrease"), 'value' => $formproduct->selectWarehouses(GETPOST('idwarehouse')?GETPOST('idwarehouse'):'ifone', 'idwarehouse', '', 1, 0, 0, '', 0, $forcecombo))
-		);
-		*/
-		$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"].'?id='.$object->id, $langs->trans('XXX'), $text, 'confirm_xxx', $formquestion, 0, 1, 220);
+		// Call Hook formConfirm
+		$parameters = array('lineid' => $lineid);
+		$reshook = $hookmanager->executeHooks('formConfirm', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
+		if (empty($reshook)) $formconfirm .= $hookmanager->resPrint;
+		elseif ($reshook > 0) $formconfirm = $hookmanager->resPrint;
+
+		// Print form confirm
+		print $formconfirm;
 	}
-
-	// Call Hook formConfirm
-	$parameters = array('lineid' => $lineid);
-	$reshook = $hookmanager->executeHooks('formConfirm', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
-	if (empty($reshook)) $formconfirm .= $hookmanager->resPrint;
-	elseif ($reshook > 0) $formconfirm = $hookmanager->resPrint;
-
-	// Print form confirm
-	print $formconfirm;
 
 
 	// Object card
