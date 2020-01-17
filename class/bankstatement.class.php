@@ -1257,17 +1257,22 @@ class BankStatement extends CommonObject
  */
 class BankStatementFormat
 {
-	public $mapping          = array('date', 'label', 'credit', 'debit');
-	public $dateFormat       = 'Y-m-d';
-	public $enclosure        = '"';
-	public $separator        = ';';
-	public $lineEnding       = null; // NULL means stream_get_line will split at '\n', '\r' and '\r\n' (https://www.php.net/manual/en/function.stream-get-line.php)
-	public $maxRowSize       = 4096;
-	public $escape           = '\\';
-	public $columnMode       = false;
-	public $directionMapping = array('credit' => DIRECTION_CREDIT, 'debit' => DIRECTION_DEBIT);
-	public $useDirection     = false;
-	public $skipFirstLine    = true;
+	public $mapping           = array('date', 'label', 'credit', 'debit');
+	public $dateFormat        = 'Y-m-d';
+	public $enclosure         = '"';
+	public $separator         = ';';
+	public $lineEnding        = "\\r\\n|\\r|\\n"; // NULL means stream_get_line will split at '\n', '\r' and '\r\n'
+	//                                   ()
+	public $fileChunkSize     = 4096; // how many characters will be read at a time.
+	//                                   In previous implementations it was the maximum length of a CSV line but it no
+	//                                   longer is (buffering ensures longer lines can be handled).
+	public $maxLineBufferSize = 16384; // sanity check: if the wrong file is sent (a large binary file for instance),
+	//                                    don't wait until the server is out of memory to raise an error.
+	public $escape            = '\\';
+	public $columnMode        = false;
+	public $directionMapping  = array('credit' => DIRECTION_CREDIT, 'debit' => DIRECTION_DEBIT);
+	public $useDirection      = false;
+	public $skipFirstLine     = true;
 
 	// internal CSV string buffering
 	private $TFullLines = array(); // stores full CSV lines as string until they are read
@@ -1286,20 +1291,30 @@ class BankStatementFormat
 	}
 
 	/**
+	 * Returns the next line of text from the open file descriptor $csvFile. It basically works a lot like PHP standard
+	 * stream_get_line() [https://www.php.net/manual/en/function.stream-get-line.php], except that
+	 * stream_get_line($csvFile, $this->max) without the $ending parameter will not work the same: with getNextCSVLine,
+	 * $this->lineEnding can be a regular expression.
+	 *
 	 * @param resource  $csvFile  An open CSV file
 	 * @param boolean   $isFirst  Whether this is the first line read from the CSV
 	 * @return string|null        Null when feof is reached
+	 * @throws ErrorException
 	 */
 	public function getNextCSVLine($csvFile)
 	{
-		$ending = $this->lineEnding ? '#' . $this->lineEnding . '#' :  "#(\\r\\n|\\r|\\n)#";
+		$ending = $this->lineEnding ? '#' . $this->lineEnding . '#' :  "#\\r\\n|\\r|\\n#";
 		if (count($this->TFullLines)) {
 			return array_shift($this->TFullLines);
 		} elseif (feof($csvFile)) {
 			return null;
 		} else {
 			while (count($lines = preg_split($ending, $this->lineBuffer)) === 1 && !feof($csvFile)) {
-				$this->lineBuffer .= fread($csvFile, $this->maxRowSize);
+				$chunk = fread($csvFile, $this->fileChunkSize);
+				if (strlen($this->lineBuffer) + strlen($chunk) > $this->maxLineBufferSize) {
+					throw new ErrorException('CSV line length exceeds maxLineBufferSize');
+				}
+				$this->lineBuffer .= $chunk;
 			}
 			$this->lineBuffer = array_pop($lines);
 			if ($lines) $this->TFullLines += $lines;
