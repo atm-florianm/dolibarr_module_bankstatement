@@ -23,20 +23,27 @@ BankStatementAbout = À propos du module Import de relevés de banque
 BankStatementAboutPage = À propos du module Import de relevés de banque
 About = À propos
 
+# Objects
+BankStatements=Relevés
+BankStatementLigne=Ligne de relevé
+
 # Menus
-LeftMenuBankStatement=Relevés de banque
-LeftMenuBankStatement_create=Importer un relevé
+LeftMenuBankStatement=Import de relevés
+LeftMenuBankStatement_create=<span title="Pour importer un relevé">Importer un relevé</span>
+LeftMenuBankStatement_overview=Lignes <i>importées</i>
 
 # Setup
 BankStatementSetup = Configuration du module Import de relevés de banque
 BankStatementSetupPage = Ici, vous pouvez configurer le module Import de relevés de banque. N’oubliez pas de sauvegarder chacune de vos modifications.
-ValueSaved = Valeur enregistrée
+ValueSaved = Valeur enregistrée :
+ValueUnchanged = Aucun changement depuis la dernière sauvegarde
+NoValueToSave=Aucune valeur modifiée
 Settings = Réglages
 
 # Module rights
 ImportAndReconcileBankStatements=Importer et rapprocher des relevés de banque
 
-# Module configuration
+# Module configuration / setup.php (admin)
 BANKSTATEMENT_SEPARATOR=Séparateur des données du fichier
 BANKSTATEMENT_MAPPING=Correspondance / ordre des colonnes du fichier CSV
 BANKSTATEMENT_DATE_FORMAT=Format de date du fichier CSV
@@ -73,6 +80,7 @@ Tabulation=Tabulation (<b>↹</b>)
 Comma=Virgule (,)
 Colon=Deux-points (:)
 Pipe=Barre verticale (|)
+SaveAll=Sauvegarder tout
 
 
 # Setup errors

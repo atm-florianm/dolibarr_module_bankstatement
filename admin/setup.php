@@ -147,10 +147,11 @@ function get_conf_input($confName, $parameters) {
 	global $conf, $langs;
 	$confValue = isset($conf->global->{$confName}) ? $conf->global->{$confName} : '';
 	$inputAttrs = sprintf(
-		'name="%s" id="%s" class="%s"',
+		'name="%s" id="%s" class="%s" data-saved-value="%s"',
 		htmlspecialchars($confName, ENT_COMPAT),
 		htmlspecialchars($confName, ENT_COMPAT),
-		htmlspecialchars($parameters['css'], ENT_COMPAT)
+		htmlspecialchars($parameters['css'], ENT_COMPAT),
+		htmlspecialchars($confValue)
 	);
 	if (!empty($parameters['required'])) $inputAttrs .= ' required';
 	switch ($parameters['inputtype']) {
@@ -246,6 +247,7 @@ $form = new Form($db);
 		);
 	}
 	?>
+	<tr><td></td><td><button onclick="saveAll('BANKSTATEMENT_')" class="button"><?php echo $langs->trans('SaveAll');?></button></td></tr>
 	</tbody>
 </table>
 <?php

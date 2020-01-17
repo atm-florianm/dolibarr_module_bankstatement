@@ -55,11 +55,11 @@ if (!_trans) _trans = [];
  *
  * Example:
  *   DOM:
- *   <form>
- *       <input id="MY_CONF" name="MY_CONF" />
- *       <button id="save_MY_CONF">Save</button>
+ *   <form id="form_save_MODULE_OPTION">
+ *       <input id="MODULE_OPTION" name="MODULE_OPTION" />
+ *       <button id="save_MODULE_OPTION">Save</button>
  *   </form>
- *   Js:  ajaxSaveOnClick("MY_CONF")
+ *   Js:  ajaxSaveOnClick("MODULE_OPTION")
  *
  * @param code  The constant name; the DOM must have a HTMLElement with the id "save_" + code
  */
@@ -68,32 +68,40 @@ function ajaxSaveOnClick(code) {
 	let url = window.location.origin+window.location.pathname;
 	$("#" + code).closest('form').submit(
 		function(ev) {
-			let entity = '<?php echo $conf->entity; ?>';
-			let value = $('#' + code).val()
-			let action = 'ajax_set_const';
-			if (value == '') action = 'del';
-			$.get(
-				url,
-				{
-					action: action,
-					name: code,
-					entity: entity,
-					value: value
-				},
-				function () {
-					$.jnotify(_trans['ValueSaved'], 'mesgs');
-				}
-			);
+			if (isUnsaved(code)) {
+				let entity = '<?php echo $conf->entity; ?>';
+				let value = $('#' + code).val()
+				let action = 'ajax_set_const';
+				if (value == '') action = 'del';
+				$.get(
+					url,
+					{
+						action: action,
+						name: code,
+						entity: entity,
+						value: value
+					},
+					function () {
+						$.jnotify(_trans['ValueSaved']+ ' ' + _trans[code], 'mesgs');
+						$("#" + code).attr('data-saved-value', value)
+					}
+				);
+			} else {
+				$.jnotify(_trans['ValueUnchanged'], 'warning');
+				ev.preventDefault();
+				return;
+			}
 			ev.preventDefault();
 		}
 	);
 }
 
 /**
- * Force page reload after a particular element is clicked.
- * For instance, an ajax constant on/off button usually doesn’t reload
- * the page, but you might want a page reload if it triggers something.
- * @param elem
+ * Toggle some visibility switches after a particular element is clicked.
+ * Enables you to not display some conf inputs if a boolean config they depend
+ * on is disabled.
+ * @param confName
+ * @param confName2
  */
 function reloadOnClick(confName, confName2) {
 	let toggleShowInput = function() {
@@ -101,6 +109,35 @@ function reloadOnClick(confName, confName2) {
 	};
 	$('#set_' + confName).click(toggleShowInput);
 	$('#del_' + confName).click(toggleShowInput);
+}
+
+function isUnsaved(confName) {
+	let input = $('#' + confName);
+	return input.val() != input.attr('data-saved-value');
+}
+
+/**
+ * Saves all unsaved confs (except those not displayed).
+ *
+ * @param confPrefix
+ */
+function saveAll(confPrefix) {
+	let toBeSaved = $('form[id^=form_save_' + confPrefix + ']:visible').filter(function(n, form) {
+		let confName = form.id.replace(/^form_save_/g, '');
+		return isUnsaved(confName);
+	});
+	if (toBeSaved.length === 0) {
+		$.jnotify(_trans['NoValueToSave'], 'warning');
+	}
+	toBeSaved.each(function(n, form) {
+		/*
+		Note : we trigger a button click instead of a form submit
+		because form submit bypasses HTML5 validation: this would happily
+		disregard the "required", "pattern", etc. attributes.
+		*/
+		//$(form).trigger('submit');
+		$(form).find('button[id^=btn_save_]').trigger('click');
+	});
 }
 
 /* Javascript library of module BankStatement */
