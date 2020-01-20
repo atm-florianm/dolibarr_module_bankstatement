@@ -44,3 +44,8 @@ else header('Cache-Control: no-cache');
 .hide_conf {
 	display: none;
 }
+
+td.col_date { text-align: center; }
+td.col_amount { text-align: right; }
+
+/*col.col_massaction { width: 0px; display: none; }*/

@@ -221,7 +221,8 @@ elseif ($action === 'add') {
 	}
 }
 elseif ($action === 'reconcile') {
-	// TODO : écran de rapprochement
+	// TODO : écran de rapprochement/création d’écritures ; à voir si sur cette card ou sur bankstatement_reconcile.php
+	//        ou sur les 2 avec des fonctions communes factorisées
 	print load_fiche_titre($langs->trans("BankStatement"));
 	$sqlSelect = array('b.rowid', 'b.label', 'b.rappro', 'b.num_releve', 'b.fk_account', 'b.amount', 'b.datev', 'b.dateo');
 	$sql = 'SELECT ' . join(', ', $sqlSelect) .' FROM ' . MAIN_DB_PREFIX . 'bank AS b'

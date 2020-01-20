@@ -1172,7 +1172,12 @@ class BankStatement extends CommonObject
 	{
 		global $langs;
 //		return parent::printObjectLines($action, $seller, $buyer, $selected, $dateSelector, $defaulttpldir);
-		$fieldsToShow = array('date', 'label', 'credit', 'debit');
+
+		// TODO: use a common function that uses the "visible" attribute of the field to determine whether or not to
+		//        show the field.
+		// TODO: configure column widths
+
+		$fieldsToShow = array('date', 'label', 'credit', 'debit', 'status');
 		$TTh = array_map(function($key) use ($langs) {
 			return '<th class="linecol"' . $key . '>' . $langs->trans(ucfirst($key)) . '</th>';
 		}, $fieldsToShow);
@@ -1185,7 +1190,7 @@ class BankStatement extends CommonObject
 			</thead>
 			<tbody>
 			<?php
-			$i=0;
+			$i = 0;
 			foreach ($this->lines as $line) {
 				$this->printObjectLine('show', $line, '', '', $i++, '', '', '', '', null, '');
 			}
@@ -1224,7 +1229,9 @@ class BankStatement extends CommonObject
 		if ($action === 'editline') {
 			$fieldDisplayMethod = 'showInputField';
 		}
-		$fieldsToShow = array('date', 'label', 'credit', 'debit');
+		// TODO: use a common function that uses the "visible" attribute of the field to determine whether or not to
+		//        show the field.
+		$fieldsToShow = array('date', 'label', 'credit', 'debit', 'status');
 		$THtmlRow = array_map(
 			function ($fieldKey) use ($line, $fieldDisplayMethod) {
 				return '<td class="linecol' . $fieldKey . '">'

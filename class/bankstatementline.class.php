@@ -48,13 +48,14 @@ class BankStatementLine extends CommonObjectLine
 	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
 	 */
 	public $fields=array(
-		'rowid'            => array('type'=>'integer',      'label'=>'TechnicalID',     'enabled'=>1, 'position'=>1, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>'1', 'index'=>1, 'comment'=>"Id"),
+		'rowid'            => array('type'=>'integer',      'label'=>'TechnicalID',     'enabled'=>1, 'position'=>1, 'notnull'=>1, 'visible'=> 0, 'noteditable'=>'1', 'index'=>1, 'comment'=>"Id"),
 		'date'             => array('type'=>'date',         'label'=>'TransactionDate', 'enabled'=>1, 'position'=>2, 'notnull'=>1, 'visible'=> 1,),
 		'label'            => array('type'=>'varchar(128)', 'label'=>'Label',           'enabled'=>1, 'position'=>3, 'notnull'=>0, 'visible'=> 1,),
 		'amount'           => array('type'=>'double(24,8)', 'label'=>'Amount',          'enabled'=>1, 'position'=>4, 'notnull'=>1, 'visible'=> 1,),
 		'direction'        => array('type'=>'integer',      'label'=>'Type',            'enabled'=>1, 'position'=>5, 'notnull'=>1, 'visible'=> 1, 'arrayofkeyval'=>array(self::DIRECTION_CREDIT=>'Credit', self::DIRECTION_DEBIT=>'Debit'),),
 		'status'           => array('type'=>'integer',      'label'=>'Status',          'enabled'=>1, 'position'=>6, 'notnull'=>1, 'visible'=> 1, 'arrayofkeyval'=>array(0=>'Unreconciled', 1=>'Reconciled'),),
 		'fk_bankstatement' => array('type'=>'integer',      'label'=>'BankStatement',   'enabled'=>1, 'position'=>7, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'bankstatement_bankstatement.rowid',),
+//		'fk_payment'       => array('type'=>'integer',      'label'=>'BankPayment',     'enabled'=>1, 'position'=>8, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'paiement.rowid',),
 	);
 	public $rowid;
 	public $date;
@@ -178,6 +179,11 @@ class BankStatementLine extends CommonObjectLine
 		setEventMessages($langs->trans('ErrorFieldNotFound', $fieldKey), array(), 'errors');
 	}
 
+	public function fetch($id)
+	{
+		return self::fetchCommon($id);
+	}
+
 	/**
 	 * Load list of objects in memory from the database.
 	 *
@@ -278,6 +284,40 @@ class BankStatementLine extends CommonObjectLine
 		$statusType = 'status'.$status;
 
 		return dolGetStatus($this->labelStatus[$status], $this->labelStatus[$status], '', $statusType, $mode);
+	}
+
+	/**
+	 * Overrides CommonObject::showOutputField;
+	 * Return HTML string to put an output field into a page
+	 * Code very similar with showOutputField of extra fields
+	 *
+	 * @param  array   		$val	       Array of properties for field to show
+	 * @param  string  		$key           Field key (name)
+	 * @param  string  		$value         Preselected value to show (for date type it must be in timestamp format, for amount or price it must be a php numeric value)
+	 * @param  string  		$moreparam     To add more parameters on html input tag
+	 * @param  string  		$keysuffix     Prefix string to add into name and id of field (can be used to avoid duplicate names)
+	 * @param  string  		$keyprefix     Suffix string to add into name and id of field (can be used to avoid duplicate names)
+	 * @param  string|int	$morecss       Value for css to define style/length of field. May also be a numeric.
+	 * @return string
+	 */
+	public function showOutputField($val, $key, $value, $moreparam = '', $keysuffix = '', $keyprefix = '', $morecss = '')
+	{
+		global $langs;
+		switch($key)
+		{
+			case 'amount':
+				return price($value, 1, $langs, 1, 2, 2);
+			case 'status':
+				return '<span class="badge badge-status' . $value . ' badge-status">' . $langs->trans($val['arrayofkeyval'][$value]) . '</span>';
+			case 'fk_bankstatement':
+				return '';
+			case 'account':
+				$account = new Account($this->db);
+				$account->fetch($this->fk_account);
+				return $account->getNomUrl(1, '', 'reflabel');
+			default:
+				return parent::showOutputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss);
+		}
 	}
 
 }
