@@ -1,30 +1,8 @@
-<div class="border" width="100%">
-	<dl class="reconcile-common">
-		<div class="nocolbreak">
-			<dt><?php echo $langs->trans("BankAccount") ?></dt>
-			<dd><?php echo $transactionCompare->account->getNomUrl(1) ?></dd>
-		</div>
-
-		<div class="nocolbreak">
-			<div>
-				<dt><?php echo $langs->trans("DateStart") ?></dt>
-				<dd><?php echo dol_print_date($transactionCompare->dateStart, 'day') ?></dd>
-			</div>
-			<div>
-				<dt><?php echo $langs->trans("DateEnd") ?></dt>
-				<dd><?php echo dol_print_date($transactionCompare->dateEnd, 'day') ?></dd>
-			</div>
-		</div>
-	</dl>
-	<tr>
-	</tr>
-</div>
-<br />
-
-<form method="post" enctype="multipart/form-data" name="bankimport">
+<form method="post" name="bankimport">
 	<input type="hidden" name="accountid" value="<?php echo $transactionCompare->account->id ?>" />
 	<input type="hidden" name="datestart" value="<?php echo $transactionCompare->dateStart ?>" />
 	<input type="hidden" name="dateend" value="<?php echo $transactionCompare->dateEnd ?>" />
+	<input type="hidden" name="action" value="apply_reconciliation" />
 	<table id="bankimport_line_to_import" class="border" width="100%">
 		<tr class="liste_titre">
 			<td colspan="4" width="40%"><?php echo $langs->trans("FileTransactions") ?></td>
@@ -253,7 +231,7 @@
 		}
 	</script>
 	<div class="center">
-		<input type="submit" class="button" name="import" value="<?php echo dol_escape_htmltag($langs->transnoentities("BankImport")) ?>">
+		<input type="submit" class="button" name="applyConciliation" value="<?php echo dol_escape_htmltag($langs->transnoentities("ApplyConciliation")) ?>">
 	</div>
 </form>
 

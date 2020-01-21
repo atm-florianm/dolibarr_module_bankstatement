@@ -19,9 +19,12 @@ class TransactionCompare
 //	public $lineHeader; // Si on historise, on concerve le header d'origine pour avoir le bon intitulé dans nos future tableaux
 //	public $TOriginLine=array(); // Contient les lignes d'origin du fichier, pour l'historisation
 
-	public $TBank = array(); // Will contain all account lines of the period
-	public $TCheckReceipt = array(); // Will contain check receipt made for account lines of the period
-	public $TFile = array(); // Will contain all file lines
+	/** @var AccountLine[] $TBank */
+	public $TBank          = array(); // Will contain all account lines of the period
+	/** @var array $TCheckReceipt */
+	public $TCheckReceipt  = array(); // Will contain check receipt made for account lines of the period
+	/** @var BankStatementLine[] $TImportedLines */
+	public $TImportedLines = array(); // Will contain all imported lines
 
 	public $nbCreated = 0;
 	public $nbReconciled = 0;
@@ -30,6 +33,33 @@ class TransactionCompare
 		$this->db = &$db;
 		$this->dateStart = strtotime('first day of last month');
 		$this->dateEnd = strtotime('last day of last month');
+	}
+
+	/**
+	 * @param $accountId
+	 * @return bool
+	 */
+	function fetchAccount($accountId)
+	{
+		global $langs;
+		// Bank account selected
+		if($accountId <= 0) {
+			setEventMessage($langs->trans('ErrorAccountIdNotSelected'), 'errors');
+			return false;
+		} else {
+			$this->account = new Account($this->db);
+			$this->account->fetch($accountId);
+		}
+	}
+
+	/**
+	 * @param $dateStart
+	 * @param $dateEnd
+	 */
+	function setStartAndEndDate($dateStart, $dateEnd) {
+		// Start and end date regarding bank statement
+		$this->dateStart = $dateStart;
+		$this->dateEnd = $dateEnd;
 	}
 
 	/**
@@ -87,13 +117,13 @@ class TransactionCompare
 		$latestDate = null;
 		$bankStatementLine = new BankStatementLine($this->db);
 		$TError = array();
-		$this->TFile = array();
+		$this->TImportedLines = array();
 		foreach ($TBankstatementLineId as $id) {
 			if ($bankStatementLine->fetch($id) <= 0) {
 				$TError[] = $id;
 				continue;
 			}
-			$this->TFile[] = $bankStatementLine->getFieldValues();
+			$this->TImportedLines[] = $bankStatementLine->getFieldValues();
 			if ($earliestDate === null || $bankStatementLine->date < $earliestDate) $earliestDate = $bankStatementLine->date;
 			if ($latestDate   === null || $bankStatementLine->date > $latestDate)   $latestDate   = $bankStatementLine->date;
 		}
@@ -135,12 +165,12 @@ class TransactionCompare
 	function compare_transactions() {
 
 		// For each file transaction, we search in Dolibarr bank transaction if there is a match by amount
-		foreach($this->TFile as &$fileLine) {
-			$amount = price2num($fileLine['amount']); // Transform to numeric string
+		foreach($this->TImportedLines as &$importedLine) {
+			$amount = price2num($importedLine->amount); // Transform to numeric string
 			if(is_numeric($amount)) {
-				$transac = $this->search_dolibarr_transaction_by_amount($amount, $fileLine['label']);
+				$transac = $this->search_dolibarr_transaction_by_amount($amount, $importedLine->label);
 				if($transac === false) $transac = $this->search_dolibarr_transaction_by_receipt($amount);
-				$fileLine['bankline'] = $transac;
+				$importedLine->bankline = $transac;
 			}
 		}
 	}
@@ -267,12 +297,9 @@ class TransactionCompare
 	/**
 	 * Actions made after file check by user
 	 */
-	public function import_data($TLine)
+	public function applyConciliation($TLine)
 	{
 		global $conf;
-
-		$PDOdb = new TPDOdb;
-
 		if (!empty($TLine['piece']))
 		{
 			dol_include_once('/compta/paiement/class/paiement.class.php');
@@ -285,15 +312,15 @@ class TransactionCompare
 			 */
 
 			$db = &$this->db;
-			foreach($TLine['piece'] as $iFileLine=>$TObject)
+			foreach($TLine['piece'] as $iImportedLine=>$TObject)
 			{
-				if(!empty($TLine['fk_soc'][$iFileLine])) {
+				if(!empty($TLine['fk_soc'][$iImportedLine])) {
 					$l_societe = new Societe($db);
-					$l_societe->fetch($TLine['fk_soc'][$iFileLine]);
+					$l_societe->fetch($TLine['fk_soc'][$iImportedLine]);
 				}
 
-				$fk_payment = $TLine['fk_payment'][$iFileLine];
-				$date_paye = $this->TFile[$iFileLine]['datev'];
+				$fk_payment = $TLine['fk_payment'][$iImportedLine];
+				$date_paye = $this->TImportedLines[$iImportedLine]->date;
 
 				foreach($TObject as $typeObject=>$TAmounts)
 				{
@@ -302,10 +329,24 @@ class TransactionCompare
 						switch ($typeObject)
 						{
 							case 'facture':
-								$fk_bank = $this->doPaymentForFacture($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye);
+								$fk_bank = $this->doPaymentForFacture(
+									$TLine,
+									$TAmounts,
+									$l_societe,
+									$iImportedLine,
+									$fk_payment,
+									$date_paye
+								);
 								break;
 							case 'fournfacture':
-								$fk_bank = $this->doPaymentForFactureFourn($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye);
+								$fk_bank = $this->doPaymentForFactureFourn(
+									$TLine,
+									$TAmounts,
+									$l_societe,
+									$iImportedLine,
+									$fk_payment,
+									$date_paye
+								);
 								break;
 							case 'charge':
 								$fk_bank = $this->doPaymentForCharge();
@@ -314,12 +355,9 @@ class TransactionCompare
 								continue;
 								break;
 						}
-
 					}
 				}
-
 			}
-
 			unset($TLine['piece']);
 		}
 
@@ -330,25 +368,25 @@ class TransactionCompare
 		if (isset($TLine['new']))
 		{
 			if(!empty($TLine['new'])) {
-				foreach($TLine['new'] as $iFileLine) {
-					$bankLineId = $this->create_bank_transaction($this->TFile[$iFileLine]);
+				foreach($TLine['new'] as $iImportedLine) {
+					$bankLineId = $this->create_bank_transaction($this->TImportedLines[$iImportedLine]);
 					if($bankLineId > 0) {
 						$bankLine = new AccountLine($this->db);
 						$bankLine->fetch($bankLineId);
-						$this->reconcile_bank_transaction($bankLine, $this->TFile[$iFileLine]);
+						$this->reconcile_bank_transaction($bankLine, $this->TImportedLines[$iImportedLine]);
 					}
 				}
 			}
 			unset($TLine['new']);
 		}
 
-		foreach($TLine as $bankLineId => $iFileLine)
+		foreach($TLine as $bankLineId => $iImportedLine)
 		{
-			$this->reconcile_bank_transaction($this->TBank[$bankLineId], $this->TFile[$iFileLine]);
-			if (!empty($conf->global->BANKIMPORT_HISTORY_IMPORT) && $bankLineId > 0)
-			{
-				$this->insertHistoryLine($PDOdb, $iFileLine, $bankLineId);
-			}
+			$this->reconcile_bank_transaction($this->TBank[$bankLineId], $this->TImportedLines[$iImportedLine]);
+//			if (!empty($conf->global->BANKIMPORT_HISTORY_IMPORT) && $bankLineId > 0)
+//			{
+//				$this->insertHistoryLine($PDOdb, $iImportedLine, $bankLineId);
+//			}
 		}
 	}
 
@@ -370,26 +408,36 @@ class TransactionCompare
 
 	}
 
-	private function doPaymentForFacture(&$TLine, &$TAmounts, &$l_societe, $iFileLine, $fk_payment, $date_paye)
+	private function doPaymentForFacture(&$TLine, &$TAmounts, &$l_societe, $iImportedLine, $fk_payment, $date_paye)
 	{
-		return $this->doPayment($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye, 'payment');
+		return $this->doPayment($TLine, $TAmounts, $l_societe, $iImportedLine, $fk_payment, $date_paye, 'payment');
 	}
 
-	private function doPaymentForFactureFourn(&$TLine, &$TAmounts, &$l_societe, $iFileLine, $fk_payment, $date_paye)
+	private function doPaymentForFactureFourn(&$TLine, &$TAmounts, &$l_societe, $iImportedLine, $fk_payment, $date_paye)
 	{
-		return $this->doPayment($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye, 'payment_supplier');
+		return $this->doPayment($TLine, $TAmounts, $l_societe, $iImportedLine, $fk_payment, $date_paye, 'payment_supplier');
 	}
 
-	private function doPaymentForCharge(&$TLine, &$TAmounts, &$l_societe, $iFileLine, $fk_payment, $date_paye)
+	private function doPaymentForCharge(&$TLine, &$TAmounts, &$l_societe, $iImportedLine, $fk_payment, $date_paye)
 	{
-		return $this->doPayment($TLine, $TAmounts, $l_societe, $iFileLine, $fk_payment, $date_paye, 'payment_sc');
+		return $this->doPayment($TLine, $TAmounts, $l_societe, $iImportedLine, $fk_payment, $date_paye, 'payment_sc');
 	}
 
-	private function doPayment(&$TLine, &$TAmounts, &$l_societe, $iFileLine, $fk_payment, $date_paye, $type='payment')
+	/**
+	 * @param $TLine
+	 * @param $TAmounts
+	 * @param $l_societe
+	 * @param BankStatementLine $importedLine
+	 * @param $fk_payment
+	 * @param $date_paye
+	 * @param string $type
+	 * @return int
+	 */
+	private function doPayment(&$TLine, &$TAmounts, &$l_societe, $iImportedLine, $fk_payment, $date_paye, $type='payment')
 	{
 		global $conf, $langs,$user;
 
-		$note = $langs->trans('TitleBankImport') .' - '.$this->numReleve;
+		$note = $langs->trans('TitleBankImport');
 
 		if ($type == 'payment') $paiement = new Paiement($this->db);
 		elseif ($type == 'payment_supplier') $paiement = new PaiementFourn($this->db);
@@ -408,8 +456,15 @@ class TransactionCompare
 
 		if ($paiement_id > 0)
 		{
-			$bankLineId = $paiement->addPaymentToBank($user, $type, !empty($this->TFile[$iFileLine]['label']) ? $this->TFile[$iFileLine]['label'] : $note, $this->account->id, $l_societe->name, '');
-			$TLine[$bankLineId] = $iFileLine;
+			$bankLineId = $paiement->addPaymentToBank(
+				$user,
+				$type,
+				!empty($this->TImportedLines[$iImportedLine]->label) ? $this->TImportedLines[$iImportedLine]->label : $note,
+				$this->account->id,
+				$l_societe->name,
+				''
+			);
+			$TLine[$bankLineId] = $iImportedLine;
 
 			$bankLine = new AccountLine($this->db);
 			$bankLine->fetch($bankLineId);
@@ -418,7 +473,7 @@ class TransactionCompare
 			// On supprime le new saisi
 			foreach($TLine['new'] as $k=>$iFileLineNew)
 			{
-				if($iFileLineNew == $iFileLine) unset($TLine['new'][$k]);
+				if($iFileLineNew == $iImportedLine) unset($TLine['new'][$k]);
 			}
 
 			// Uniquement pour les factures client (les acomptes fournisseur n'existent pas)
@@ -430,7 +485,11 @@ class TransactionCompare
 		return 0; // Payment fail, can't return bankLineId
 	}
 
-	private function createDiscount(&$TAmounts) {
+	/**
+	 * @param $TAmounts
+	 */
+	private function createDiscount(&$TAmounts)
+	{
 
 		global $db, $user;
 
@@ -518,77 +577,44 @@ class TransactionCompare
 
 	}
 
-	private function insertHistoryLine(&$PDOdb, $iFileLine, $fk_bank)
-	{
-		if (!empty($this->hasHeader) && !empty($this->TOriginLine[$iFileLine]))
-		{
-			$header = $this->parseHeader($this->lineHeader);
-			$line = $this->parseLine($this->TOriginLine[$iFileLine]);
-
-			$historyLine = new TBankImportHistory;
-
-			$historyLine->num_releve = $this->numReleve;
-			$historyLine->fk_bank = $fk_bank;
-			$historyLine->line_imported_title = $header;
-			$historyLine->line_imported_value = $line;
-
-			$historyLine->save($PDOdb);
-		}
-	}
-
-	public function parseHeader($headerToParse)
-	{
-		global $conf;
-
-		$header = explode($conf->global->BANKIMPORT_SEPARATOR, $headerToParse);
-		$header = array_map(array('BankImport', 'cleanString'), $header);
-
-		return $header;
-	}
-
-	public static function cleanString($strToClean)
-	{
-		require_once DOL_DOCUMENT_ROOT . '/core/lib/functions.lib.php';
-		$strToClean = trim($strToClean);
-		$strToClean = preg_replace('/\s{2,}/', '', $strToClean);
-		$strToClean = dol_strtolower(dol_string_unaccent($strToClean));
-
-		return ucfirst($strToClean);
-	}
-
-	public function parseLine($lineArrayToParse)
-	{
-		$line = array_map(array('BankImport', 'cleanStringForLine'), $lineArrayToParse);
-
-		return $line;
-	}
-
-	public static function cleanStringForLine($strToClean)
-	{
-		$strToClean = trim($strToClean);
-		$strToClean = preg_replace('/\s{2,}/', '', $strToClean);
-
-		return $strToClean;
-	}
-
-	private function create_bank_transaction($fileLine) {
+	/**
+	 * @param $importedLine
+	 * @return int
+	 */
+	private function create_bank_transaction($importedLine) {
 		global $user;
 
-		$bankLineId = $this->account->addline($fileLine['datev'], 'PRE', $fileLine['label'], $fileLine['amount'], '', '', $user);
+		$bankLineId = $this->account->addline(
+			$importedLine->date,
+			'PRE',
+			$importedLine->label,
+			$importedLine->amount,
+			'',
+			'',
+			$user
+		);
 		$this->nbCreated++;
 
 		return $bankLineId;
 	}
 
-	private function reconcile_bank_transaction($bankLine, $fileLine) {
+	/**
+	 * @param AccountLine       $bankLine     A Dolibarr bank account transaction line
+	 * @param BankStatementLine $importedLine An bank statement transaction imported with BankStatement
+	 */
+	private function reconcile_bank_transaction($bankLine, $importedLine) {
 		global $user,$conf;
 
 		// Set conciliation
-		$bankLine->num_releve = $this->numReleve;
+		$bankStatement = $importedLine->getStatement();
+		if ($bankStatement === null) {
+			// todo : handle statement not loaded error
+		}
+		$bankLine->num_releve = $bankStatement->label;
 		$bankLine->update_conciliation($user, 0);
 
 		// Update value date
-		$dateDiff = ($fileLine['datev'] - strtotime($bankLine->datev)) / 24 / 3600;
+		$dateDiff = ($importedLine->date - strtotime($bankLine->datev)) / 24 / 3600;
 		$bankLine->datev_change($bankLine->id, $dateDiff);
 
 		$this->nbReconciled++;

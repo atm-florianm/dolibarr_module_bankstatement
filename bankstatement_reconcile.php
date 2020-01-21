@@ -41,31 +41,33 @@ global $langs, $user, $conf, $db;
 
 $TLineId = array_map('intval', GETPOST('toselect', 'array'));
 $accountId = GETPOST('accountId', 'int');
+$actionApplyConciliation = !empty(GETPOST('applyConciliation'));
 
 $sqlCheckIdsHaveSameAccount='SELECT COUNT(DISTINCT fk_account) FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatementdet line'
 	. ' INNER JOIN ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement statement ON line.fk_bankstatement = statement.rowid'
 	. ' WHERE line.rowid IN (' . join(',', $TLineId) . ')';
 // TODO: run query & check that result === 1, not more.
-$resql = $db->query($sqlCheckIdsHaveSameAccount);
-var_dump($db->fetch_object($resql));
+//$resql = $db->query($sqlCheckIdsHaveSameAccount);
+//var_dump($db->fetch_object($resql));
 
 $transactionCompare = new TransactionCompare($db);
-$transactionCompare->account = new Account($db);
 $form = new Form($db);
-if ($transactionCompare->account->fetch($accountId) <= 0)
-{
-	die($langs->trans('UnableToFetchAccount', $accountId));
-}
-$transactionCompare->load_transactions($TLineId);
-$transactionCompare->compare_transactions();
-$TTransactions = $transactionCompare->TFile;
+$transactionCompare->fetchAccount($accountId);
 
+if ($actionApplyConciliation) {
+	$tpl = 'tpl/bankstatement.end.tpl.php';
+	$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
+	$transactionCompare->applyConciliation(GETPOST('TLine'));
+} else {
+	$tpl = 'tpl/bankstatement.check.tpl.php';
+	$transactionCompare->load_transactions($TLineId);
+	$transactionCompare->compare_transactions();
+	$TTransactions = $transactionCompare->TImportedLines;
+}
 
 llxHeader('', $langs->trans('TitleBankCompare'));
 print_fiche_titre($langs->trans("TitleBankCompare"));
 
-include 'tpl/bankstatement.check.tpl.php';
-//include 'tpl/bankstatement.end.tpl.php';
-
-
+include 'tpl/bankstatement.common.tpl.php';
+include $tpl;
 

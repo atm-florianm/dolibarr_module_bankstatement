@@ -110,3 +110,8 @@ Reconcile = Rapprocher
 
 # Card
 FileToImport=Fichier à importer
+
+# Compare/reconcile page
+ApplyConciliation=Appliquer les actions de réconciliation sélectionnées (rapprochements automatiques et création d’écritures)
+ErrorAccountIdNotSelected=Erreur : il est nécessaire de sélectionner un compte bancaire avant de procéder au rapprochement.
+StatementCreatedAndDataImported=Actions effectuées : %d transactions rapprochées et %d écritures créées.

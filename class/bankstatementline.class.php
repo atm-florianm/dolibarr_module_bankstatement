@@ -66,6 +66,9 @@ class BankStatementLine extends CommonObjectLine
 	public $fk_bankstatement;
 	// END MODULEBUILDER PROPERTIES
 
+	/** @var BankStatement $statement */
+	public $statement;
+
 	// NOT module builder: these definitions will mimic modulebuilder fields to help display the 'credit' and 'debit' dynamic fields
 	// we call these 'dynamic' because their values are not stored directly (as is) in database
 	public $dynamicFields = array(
@@ -163,6 +166,25 @@ class BankStatementLine extends CommonObjectLine
 		}
 		$ret['error'] = $this->error;
 		return $ret;
+	}
+
+	/**
+	 * Returns the related bank statement (loads it in $this->statement if necessary)
+	 * Note: not a pure function as it may set $this->statement
+	 * @return BankStatement|null  The related bank statement (null if loading failed)
+	 */
+	public function getStatement()
+	{
+		if (empty($this->statement)) {
+			$statement = new BankStatement($this->db);
+			if ($statement->fetch($this->fk_bankstatement) <= 0) {
+				// failure
+				return null;
+			} else {
+				$this->statement = $statement;
+			}
+		}
+		return $this->statement;
 	}
 
 	/**
