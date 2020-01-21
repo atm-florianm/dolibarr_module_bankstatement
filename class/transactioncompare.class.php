@@ -435,6 +435,7 @@ class TransactionCompare
 	 */
 	private function doPayment(&$TLine, &$TAmounts, &$l_societe, $iImportedLine, $fk_payment, $date_paye, $type='payment')
 	{
+		var_dump($iImportedLine, $TLine);
 		global $conf, $langs,$user;
 
 		$note = $langs->trans('TitleBankImport');
