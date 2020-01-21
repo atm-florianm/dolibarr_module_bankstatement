@@ -47,6 +47,7 @@ if (!$res) die("Include of main fails");
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formfile.class.php';
+require_once DOL_DOCUMENT_ROOT.'/compta/bank/class/account.class.php';
 dol_include_once('/bankstatement/class/bankstatement.class.php');
 dol_include_once('/bankstatement/lib/bankstatement.lib.php');
 dol_include_once('/bankstatement/lib/bankstatement_bankstatement.lib.php');
@@ -56,7 +57,7 @@ $langs->loadLangs(array("bankstatement@bankstatement", "other"));
 
 // Get parameters
 //$ref         = GETPOST('ref', 'alpha');
-$accountId   = GETPOST('account', 'int');
+$accountId   = GETPOST('accountId', 'int');
 $action      = GETPOST('action', 'aZ09'); if (!$action) $action = 'view';
 $confirm     = GETPOST('confirm', 'alpha');
 $cancel      = GETPOST('cancel', 'aZ09');
@@ -72,6 +73,12 @@ $objectline = new BankStatementLine($db);
 $extrafields = new ExtraFields($db);
 $diroutputmassaction = $conf->bankstatement->dir_output.'/temp/massgeneration/'.$user->id;
 $hookmanager->initHooks(array('bankstatementtransactions', 'globalcard')); // Note that conf->hooks_modules contains array
+
+$search=array();
+foreach($objectline->fields as $key => $val)
+{
+	if (GETPOST('search_'.$key, 'alpha')) $search[$key]=GETPOST('search_'.$key, 'alpha');
+}
 
 // Fetch optionals attributes and labels
 $extrafields->fetch_name_optionals_label($object->table_element);
@@ -211,7 +218,6 @@ if ($action === 'view')
 	// ------------------------------------------------------------
 
 	print '<form action="bankstatement_reconcile.php">';
-	print '<input type="hidden" name="account" value="' . $accountId . '" />';
 	print $massactionbutton;
 	$linkback = '<a href="'.dol_buildpath('/bankstatement/bankstatement_list.php', 1).'?restore_lastsearch_values=1'.(!empty($socid) ? '&socid='.$socid : '').'">'.$langs->trans("BackToList").'</a>';
 
@@ -227,6 +233,17 @@ if ($action === 'view')
 
 	print '<div class="clearboth"></div>';
 
+	$form->select_comptes($accountId ? $accountId : -1, 'accountId', '', '', 1);
+	?>
+	<script type="text/javascript">
+		$(function () {
+			$('#selectaccountId').change(function () {
+				// TODO: filtrer la liste par compte
+			})
+		});
+	</script>
+	<?php
+
 	dol_fiche_end();
 
 
@@ -236,19 +253,23 @@ if ($action === 'view')
 
 	// Show object lines
 //		$objectline->fetchAll('DESC', 'date', 50, 1, array('s.fk_account' => $accountId));
-	$sqlSelect = array();
+	$TSQLSelect = array();
 	foreach ($objectline->fields as $fieldName => $fieldParams) {
-		$sqlSelect[] = 'l.'.$fieldName;
-	}
-	if (!$accountId) {
-		var_dump('account ID required; TODO: when user first arrives here, display choice of account');
-		exit;
+		$TSQLSelect[] = 'l.'.$fieldName;
 	}
 	// TODO : refaire en mode objet ? ça veut dire analyser quelles méthodes doivent être ajoutées / modifiées
+	// TODO : rendre la liste filtrable
+	// TODO : bug (?) du <select> (select2) des massactions ? Avec Firefox, la première fois que je sélectionne, la valeur
+	//        associée au select est correcte mais elle n’est pas affichée dans le select
 
-	$sqlSelect = 'SELECT ' . join(', ', $sqlSelect) . ' FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatementdet AS l';
+	$sqlSelect = 'SELECT ' . join(', ', $TSQLSelect) . ' FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatementdet AS l';
+
 	$sqlJoin = 'INNER JOIN ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement AS s ON l.fk_bankstatement = s.rowid';
-	$sqlWhere = 'WHERE s.fk_account = ' . $accountId;
+
+	$TSQLFilter = array();
+	if (!empty($accountId)) $TSQLFilter[] = 's.fk_account = ' . $accountId;
+
+	if (!empty($TSQLFilter)) $sqlWhere = 'WHERE ' . join(' AND ', $TSQLFilter);
 	$sql = join(' ', array($sqlSelect, $sqlJoin, $sqlWhere));
 
 	print '<div class="div-table-responsive-no-min">';
@@ -266,7 +287,16 @@ if ($action === 'view')
 
 	print '<thead>';
 	print '<tr class="liste_titre">';
-	foreach($objectline->fields as $fieldName => $fieldParams) {
+	/*foreach ($objectline->fields as $fieldName => $fieldParams) {
+		if (!$fieldParams['visible']) continue;
+		print '<th class="search_col_' . $fieldName . '">';
+		// TODO : champs de recherche auto en fonction des paramètres de $objectline->fields
+		print '</th>';
+	}*/
+	print '<th></th>';
+	print '</tr>';
+	print '<tr class="liste_titre">';
+	foreach ($objectline->fields as $fieldName => $fieldParams) {
 		if (!$fieldParams['visible']) continue;
 		print '<th class="col_' . $fieldName . '">' . $langs->trans($fieldParams['label']) . '</th>';
 	}

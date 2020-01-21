@@ -49,3 +49,16 @@ td.col_date { text-align: center; }
 td.col_amount { text-align: right; }
 
 /*col.col_massaction { width: 0px; display: none; }*/
+
+.nocolbreak { break-inside: avoid; }
+
+dt { display: inline-block; font-weight: bold; min-width: 25%; }
+dd { display: inline-block; }
+
+.reconcile-common {
+	column-count: 2;
+	column-gap: 1em;
+	/*
+	column-rule: solid 1px black;
+	*/
+}
