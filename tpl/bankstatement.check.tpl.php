@@ -1,9 +1,9 @@
-<form method="post" name="bankimport">
+<form method="post" name="bankstatement">
 	<input type="hidden" name="accountid" value="<?php echo $transactionCompare->account->id ?>" />
 	<input type="hidden" name="datestart" value="<?php echo $transactionCompare->dateStart ?>" />
 	<input type="hidden" name="dateend" value="<?php echo $transactionCompare->dateEnd ?>" />
 	<input type="hidden" name="action" value="apply_reconciliation" />
-	<table id="bankimport_line_to_import" class="border" width="100%">
+	<table id="bankstatement_line_to_import" class="border" width="100%">
 		<tr class="liste_titre">
 			<td colspan="4" width="40%"><?php echo $langs->trans("FileTransactions") ?></td>
 			<td colspan="7" width="60%"><?php echo $langs->trans("DolibarrTransactions") ?></td>
@@ -22,16 +22,17 @@
 			<td align="center"><input type="checkbox" <?php empty($conf->global->BANKIMPORT_UNCHECK_ALL_LINES) ? print 'checked="checked"' : ''; ?> id="checkall" name="checkall" value="1" onchange="checkAll()" /></td>
 		</tr>
 
-		<?php foreach($TTransactions as $i => $line) { ?>
+		<?php
+		foreach($transactionCompare->TImportedLines as $i => $line) { ?>
 		<tr <?php echo $bc[$var] ?>>
-			<?php if(!empty($line['bankline'])) { ?>
+			<?php if(!empty($line->bankline)) { ?>
 
-				<td class="num_line" rowspan="<?php echo count($line['bankline']) ?>"><?php echo $i + 1 ?></td>
-				<td rowspan="<?php echo count($line['bankline']) ?>"><?php echo $line['date'] ?></td>
-				<td rowspan="<?php echo count($line['bankline']) ?>"><?php echo $line['label'] ?></td>
-				<td rowspan="<?php echo count($line['bankline']) ?>" align="right"><?php echo price($line['amount']) ?></td>
+				<td class="num_line" rowspan="<?php echo count($line->bankline) ?>"><?php echo $i + 1 ?></td>
+				<td rowspan="<?php echo count($line->bankline) ?>"><?php echo $line->date ?></td>
+				<td rowspan="<?php echo count($line->bankline) ?>"><?php echo $line->label ?></td>
+				<td rowspan="<?php echo count($line->bankline) ?>" align="right"><?php echo price($line->amount) ?></td>
 
-				<?php foreach($line['bankline'] as $j => $bankline) { ?>
+				<?php foreach($line->bankline as $j => $bankline) { ?>
 				<?php if($j > 0) echo '<tr>' ?>
 				<td><?php echo $bankline['url'] ?></td>
 				<td><?php echo $bankline['date'] ?></td>
@@ -42,19 +43,19 @@
 				<td align="center">
 				<?php if($bankline['autoaction']) { ?><input type="checkbox" rel="doImport" checked="checked" name="TLine[<?php echo $bankline['id'] ?>]" value="<?php echo $i ?>" /><?php } ?>
 				</td>
-				<?php if($j < count($line['bankline'])) echo '</tr>' ?>
+				<?php if($j < count($line->bankline)) echo '</tr>' ?>
 				<?php } ?>
 
-			<?php } else if(!empty($line['error'])) { ?>
+			<?php } else if(!empty($line->error)) { ?>
 				<td class="num_line"><?php echo $i + 1 ?></td>
-				<td colspan="4"><?php echo $line['error'] ?></td>
+				<td colspan="4"><?php echo $line->error ?></td>
 				<td colspan="7">&nbsp;</td>
 
 			<?php } else { ?>
 				<td class="num_line"><?php echo $i + 1 ?></td>
-				<td><?php echo $line['date'] ?></td>
-				<td><?php echo $line['label'] ?></td>
-				<td align="right"><?php echo price($line['amount']) ?></td>
+				<td><?php echo $line->date ?></td>
+				<td><?php echo $line->label ?></td>
+				<td align="right"><?php echo price($line->amount) ?></td>
 				<td class="fields_required" colspan="5">
 					<select class="flat" name="TLine[type][<?php echo $i ?>]" id="select_line_type_<?php echo $i ?>">
 						<?php
@@ -62,11 +63,11 @@
 								print '<option value="freeline">'.$langs->trans('bankImportCretaFreeLine').'</option>';
 							}
 							if(!empty($conf->facture->enabled)) {
-								$sel = ($line['amount'] > 0 ? ' selected="selected"' : '');
+								$sel = ($line->amount > 0 ? ' selected="selected"' : '');
 								print '<option value="facture"'.$sel.'>'.$langs->trans('Invoices').'</option>';
 							}
 							if(!empty($conf->fournisseur->enabled)) {
-								$sel = ($line['amount'] < 0 ? ' selected="selected"' : '');
+								$sel = ($line->amount < 0 ? ' selected="selected"' : '');
 								print '<option value="fournfacture"'.$sel.'>'.$langs->trans('SupplierInvoices').'</option>';
 							}
 							if(!empty($conf->tax->enabled)) {
@@ -78,23 +79,23 @@
 					<?php
 
 					$comboName = 'TLine[fk_soc]['.$i.']';
-					$line['code_client'] = trim($line['code_client']);
+					$line->code_client = trim($line->code_client);
 
 					$res = $db->query("SELECT rowid, nom FROM ".MAIN_DB_PREFIX."societe
-							WHERE code_compta='".$db->escape($line['code_client'])."' OR code_compta_fournisseur='".$db->escape($line['code_client'])."'
+							WHERE code_compta='".$db->escape($line->code_client)."' OR code_compta_fournisseur='".$db->escape($line->code_client)."'
 							LIMIT 1");
 					$fk_soc = 0;
-					$name = $langs->trans('bankimport_no_customer_selected_click_to_select_one');
+					$name = $langs->trans('bankstatement_no_customer_selected_click_to_select_one');
 					if($obj_soc = $db->fetch_object($res))
 					{
 						$fk_soc = $obj_soc->rowid;
-						$name = $langs->trans('bankimport_customer_selected_click_to_select_another_one', $obj_soc->nom);
+						$name = $langs->trans('bankstatement_customer_selected_click_to_select_another_one', $obj_soc->nom);
 					}
 
 					$select_company = $form->select_company($fk_soc, $comboName,'',1,0,1);
 
 					echo '<br />';
-					echo $line['code_client'].' <span onclick="$(\'#span_for_company_'.$i.'\').show(); $(this).hide();"><b>'.$name.'</b></span><span id="span_for_company_'.$i.'" style="display:none">'.$select_company.'</span>';
+					echo $line->code_client.' <span onclick="$(\'#span_for_company_'.$i.'\').show(); $(this).hide();"><b>'.$name.'</b></span><span id="span_for_company_'.$i.'" style="display:none">'.$select_company.'</span>';
 					echo '&nbsp;<span class="fieldrequired">*</span><br />';
 					echo $form->select_types_paiements('', 'TLine[fk_payment]['.$i.']');
 					echo '&nbsp;<span class="fieldrequired">*</span>';
@@ -129,7 +130,7 @@
 						else $fk_soc.show();
 
 						$.ajax({
-							url:"<?php echo dol_buildpath('/bankimport/script/interface.php',1) ?>"
+							url:"<?php echo dol_buildpath('/bankstatement/script/interface.php',1) ?>"
 							,data: {
 								get:'pieceList'
 								,fk_soc:fk_soc
@@ -238,9 +239,9 @@
 
 <script type="text/javascript">
 	$(function() {
-		$('form[name=bankimport]').submit(function(event) {
+		$('form[name=bankstatement]').submit(function(event) {
 			var TError = new Array;
-			var TLigneToImport = $('#bankimport_line_to_import td input[rel=doImport]:checked');
+			var TLigneToImport = $('#bankstatement_line_to_import td input[rel=doImport]:checked');
 
 			for (var i = 0; i < TLigneToImport.length; i++)
 			{

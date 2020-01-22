@@ -123,6 +123,7 @@ class TransactionCompare
 				continue;
 			}
 			$this->TImportedLines[] = $bankStatementLine;
+			// find start and end date
 			if ($earliestDate === null || $bankStatementLine->date < $earliestDate) $earliestDate = $bankStatementLine->date;
 			if ($latestDate   === null || $bankStatementLine->date > $latestDate)   $latestDate   = $bankStatementLine->date;
 		}
