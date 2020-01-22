@@ -19,8 +19,9 @@ CREATE TABLE llx_bankstatement_bankstatementdet(
 	rowid            integer AUTO_INCREMENT PRIMARY KEY NOT NULL,
 	date             datetime NOT NULL,     -- date of bank transaction
 	label            varchar(128),          -- label
-	amount           double(24,8) NOT NULL, -- amount of transaction (always > 0)
-	direction        tinyint NOT NULL,      -- -1: DEBIT;        1: CREDIT
+	amount           double(24,8) NOT NULL, -- amount of transaction (either >0 or <0);
+	                                        -- 0 should not occur (will be handled in later versions)
+	                                        -- (in previous drafts we had a 'direction' column for the sign)
 	status           tinyint NOT NULL,      -- 0: UNRECONCILED;  1: RECONCILED
 	fk_bankstatement integer NOT NULL       -- rowid of llx_bankstatement_bankstatement
 	-- END MODULEBUILDER FIELDS

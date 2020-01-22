@@ -52,7 +52,6 @@ class BankStatementLine extends CommonObjectLine
 		'date'             => array('type'=>'date',         'label'=>'TransactionDate', 'enabled'=>1, 'position'=>2, 'notnull'=>1, 'visible'=> 1,),
 		'label'            => array('type'=>'varchar(128)', 'label'=>'Label',           'enabled'=>1, 'position'=>3, 'notnull'=>0, 'visible'=> 1,),
 		'amount'           => array('type'=>'double(24,8)', 'label'=>'Amount',          'enabled'=>1, 'position'=>4, 'notnull'=>1, 'visible'=> 1,),
-		'direction'        => array('type'=>'integer',      'label'=>'Type',            'enabled'=>1, 'position'=>5, 'notnull'=>1, 'visible'=> 1, 'arrayofkeyval'=>array(self::DIRECTION_CREDIT=>'Credit', self::DIRECTION_DEBIT=>'Debit'),),
 		'status'           => array('type'=>'integer',      'label'=>'Status',          'enabled'=>1, 'position'=>6, 'notnull'=>1, 'visible'=> 1, 'arrayofkeyval'=>array(0=>'Unreconciled', 1=>'Reconciled'),),
 		'fk_bankstatement' => array('type'=>'integer',      'label'=>'BankStatement',   'enabled'=>1, 'position'=>7, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'bankstatement_bankstatement.rowid',),
 //		'fk_payment'       => array('type'=>'integer',      'label'=>'BankPayment',     'enabled'=>1, 'position'=>8, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'paiement.rowid',),
@@ -93,6 +92,17 @@ class BankStatementLine extends CommonObjectLine
 	}
 
 	/**
+	 * Tell whether debit or credit; current implementation is "naive" and very simple, it may evolve
+	 * to handle edge cases (e.g. zero-amount transactions).
+	 * @return int|null  BankStatementLine::DIRECTION_CREDIT or BankStatementLine::DIRECTION_DEBIT or null
+	 */
+	public function getDirection()
+	{
+		if ($this->amount === 0) return null;
+		return ($this->amount > 0) ? self::DIRECTION_CREDIT : self::DIRECTION_DEBIT;
+	}
+
+	/**
 	 * Copies and converts cell values from the CSV onto the object.
 	 *
 	 * @param array $dataRow  Associative array with keys: 'date', 'label', 'credit', 'debit'
@@ -103,7 +113,7 @@ class BankStatementLine extends CommonObjectLine
 		$this->date      = $dataRow['date'];
 		$this->label     = $dataRow['label'];
 		$this->amount    = $dataRow['amount'];
-		$this->direction = $dataRow['direction'];
+		if ($dataRow['direction'] === self::DIRECTION_DEBIT) $this->amount = -$this->amount;
 		$this->error     = $dataRow['error'];
 		$this->calculateDebitCredit();
 	}
@@ -124,12 +134,12 @@ class BankStatementLine extends CommonObjectLine
 	 */
 	public function calculateDebitCredit()
 	{
-		switch ($this->direction) {
+		switch ($this->getDirection()) {
 			case self::DIRECTION_CREDIT:
 				$this->credit = $this->amount;
 				break;
 			case self::DIRECTION_DEBIT:
-				$this->debit = $this->amount;
+				$this->debit = -$this->amount;
 				break;
 		}
 	}
@@ -144,11 +154,11 @@ class BankStatementLine extends CommonObjectLine
 	public function create(User $user, $notrigger = false)
 	{
 		if (!$this->fk_bankstatement) {
-			// do not allow inserting a line that is attached to no bank statement
+			// do not allow inserting a line that is not attached a bank statement
 			return -1;
 		}
-		if ($this->direction === null) {
-			// do not allow inserting a line with no type
+		if ($this->getDirection() === null) {
+			// do not allow inserting a line with no direction
 			return -1;
 		}
 		if (!$this->status) $this->status = 0;
@@ -201,6 +211,11 @@ class BankStatementLine extends CommonObjectLine
 		setEventMessages($langs->trans('ErrorFieldNotFound', $fieldKey), array(), 'errors');
 	}
 
+	/**
+	 * Set statement line properties from the database record identified by $id
+	 * @param $id
+	 * @return int
+	 */
 	public function fetch($id)
 	{
 		return self::fetchCommon($id);
@@ -286,11 +301,20 @@ class BankStatementLine extends CommonObjectLine
 		}
 	}
 
+	/**
+	 * @param int $mode
+	 * @return string  A text meant to indicate the "status" of the object. Here the status is either Unreconciled or Reconciled
+	 */
 	public function getLibStatut($mode=0)
 	{
 		return $this->LibStatut($this->status, $mode);
 	}
 
+	/**
+	 * @param $status
+	 * @param $mode
+	 * @return string  A text meant to indicate a "status". Here the status is either Unreconciled or Reconciled
+	 */
 	public function LibStatut($status, $mode)
 	{
 		// phpcs:enable

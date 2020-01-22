@@ -115,9 +115,9 @@ class TransactionCompare
 		global $conf, $langs;
 		$earliestDate = null;
 		$latestDate = null;
-		$bankStatementLine = new BankStatementLine($this->db);
 		$TError = array();
 		foreach ($TBankstatementLineId as $id) {
+			$bankStatementLine = new BankStatementLine($this->db);
 			if ($bankStatementLine->fetch($id) <= 0) {
 				$TError[] = $id;
 				continue;
@@ -382,6 +382,7 @@ class TransactionCompare
 
 		foreach($TLine as $bankLineId => $iImportedLine)
 		{
+			var_dump($this->TBank[$bankLineId]);
 			$this->reconcile_bank_transaction($this->TBank[$bankLineId], $this->TImportedLines[$iImportedLine]);
 //			if (!empty($conf->global->BANKIMPORT_HISTORY_IMPORT) && $bankLineId > 0)
 //			{

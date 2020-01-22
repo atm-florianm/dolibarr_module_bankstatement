@@ -101,8 +101,8 @@ class BankStatement extends CommonObject
 		'tms'               => array('type'=>'timestamp',    'label'=>'DateModification', 'enabled'=>1, 'position'=>501,  'notnull'=>0,  'visible'=> 0,),
 		'fk_user_import'    => array('type'=>'integer',      'label'=>'UserImport',       'enabled'=>1, 'position'=>502,  'notnull'=>0,  'visible'=> 0, 'foreignkey'=>'user.rowid',),
 		'date_import'       => array('type'=>'date',         'label'=>'DateImport',       'enabled'=>1, 'position'=>503,  'notnull'=>0,  'visible'=> 0, 'noteditable'=>1),
-		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',    'enabled'=>1, 'position'=>504,  'notnull'=>0,  'visible'=> 0, 'foreignkey'=>'user.rowid',),
-		'date_reconcile'    => array('type'=>'date',         'label'=>'DateReconcile',    'enabled'=>1, 'position'=>505,  'notnull'=>0,  'visible'=> 4,),
+		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',    'enabled'=>1, 'position'=>504,  'notnull'=>0,  'visible'=> -4, 'foreignkey'=>'user.rowid',),
+//		'date_reconcile'    => array('type'=>'date',         'label'=>'DateReconcile',    'enabled'=>1, 'position'=>505,  'notnull'=>0,  'visible'=> 4,),
 		'import_key'        => array('type'=>'varchar(14)',  'label'=>'ImportId',         'enabled'=>1, 'position'=>1000, 'notnull'=>-1, 'visible'=> 0,),
 		'entity'            => array('type'=>'integer',      'label'=>'Entity',           'enabled'=>1, 'position'=>1000, 'notnull'=>0,  'visible'=> 0, 'foreignkey'=>'entity.rowid',),
 	);
@@ -1240,7 +1240,7 @@ class BankStatement extends CommonObject
 			},
 			$fieldsToShow
 		);
-		$lineTypeClass = ($line->direction === $line::DIRECTION_CREDIT) ? 'credit' : 'debit';
+		$lineTypeClass = ($line->getDirection() === $line::DIRECTION_CREDIT) ? 'credit' : 'debit';
 
 		echo '<tr id="row-'.intval($i).'" class="' . $lineTypeClass . '_line" data-element="bankstatementdet" data-id="'.intval($line->id).'">' . "\n"
 			 . join("\n", $THtmlRow)

@@ -28,10 +28,10 @@ if (!$resInclude) die ('Unable to include main.inc.php');
 dol_include_once('/bankstatement/class/bankstatement.class.php');
 dol_include_once('/bankstatement/lib/bankstatement.lib.php');
 
-dol_include_once('/compta/bank/class/account.class.php');
 dol_include_once('/compta/paiement/cheque/class/remisecheque.class.php');
 dol_include_once('/bankstatement/class/transactioncompare.class.php');
-require_once DOL_DOCUMENT_ROOT . '/societe/class/societe.class.php';
+require_once DOL_DOCUMENT_ROOT . '/compta/bank/class/account.class.php';
+//require_once DOL_DOCUMENT_ROOT . '/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT . '/user/class/user.class.php';
 require_once DOL_DOCUMENT_ROOT . '/adherents/class/adherent.class.php';
 require_once DOL_DOCUMENT_ROOT . '/compta/sociales/class/chargesociales.class.php';
