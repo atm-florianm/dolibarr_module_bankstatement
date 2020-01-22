@@ -57,6 +57,7 @@ $transactionCompare->fetchAccount($accountId);
 if ($actionApplyConciliation) {
 	$tpl = 'tpl/bankstatement.end.tpl.php';
 	$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
+	$transactionCompare->load_imported_transactions($TLineId);
 	$transactionCompare->applyConciliation(GETPOST('TLine'));
 } else {
 	$tpl = 'tpl/bankstatement.check.tpl.php';

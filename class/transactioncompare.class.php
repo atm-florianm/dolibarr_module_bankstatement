@@ -117,13 +117,12 @@ class TransactionCompare
 		$latestDate = null;
 		$bankStatementLine = new BankStatementLine($this->db);
 		$TError = array();
-		$this->TImportedLines = array();
 		foreach ($TBankstatementLineId as $id) {
 			if ($bankStatementLine->fetch($id) <= 0) {
 				$TError[] = $id;
 				continue;
 			}
-			$this->TImportedLines[] = $bankStatementLine->getFieldValues();
+			$this->TImportedLines[] = $bankStatementLine;
 			if ($earliestDate === null || $bankStatementLine->date < $earliestDate) $earliestDate = $bankStatementLine->date;
 			if ($latestDate   === null || $bankStatementLine->date > $latestDate)   $latestDate   = $bankStatementLine->date;
 		}
@@ -294,12 +293,11 @@ class TransactionCompare
 		);
 	}
 
-	/**
-	 * Actions made after file check by user
+	/** Actions made after file check by user
+	 * @param array $TLine  Nested assoc array describing the conciliation actions the user wants to apply
 	 */
 	public function applyConciliation($TLine)
 	{
-		global $conf;
 		if (!empty($TLine['piece']))
 		{
 			dol_include_once('/compta/paiement/class/paiement.class.php');
@@ -326,6 +324,7 @@ class TransactionCompare
 				{
 					if(!empty($TAmounts))
 					{
+						$this->normalizeTAmounts($TAmounts);
 						switch ($typeObject)
 						{
 							case 'facture':
@@ -424,8 +423,11 @@ class TransactionCompare
 	}
 
 	/**
-	 * @param $TLine
-	 * @param $TAmounts
+	 * @param array $TLine  Nested array describing actions to be performed.
+	 * @param array $TAmounts  Decomposition of the total amount.
+	 *                         Keys: invoice IDs; values: amounts. A client may settle several invoices (or even settle
+	 *                         them partially) with one payment; then we need to break down the total amount in order
+	 *                         assign an amount to each invoice
 	 * @param $l_societe
 	 * @param BankStatementLine $importedLine
 	 * @param $fk_payment
@@ -435,7 +437,6 @@ class TransactionCompare
 	 */
 	private function doPayment(&$TLine, &$TAmounts, &$l_societe, $iImportedLine, $fk_payment, $date_paye, $type='payment')
 	{
-		var_dump($iImportedLine, $TLine);
 		global $conf, $langs,$user;
 
 		$note = $langs->trans('TitleBankImport');
@@ -630,5 +631,17 @@ class TransactionCompare
 	private function extractNegDir(array $matches) {
 		$this->neg_dir = $matches[1];
 		return substr($matches[0], -1);
+	}
+
+	/**
+	 * @param $TAmounts  Array associating invoice IDs with amounts. It represents the breakdown of a payment (because
+	 *                   one payment may pay several invoices).
+	 */
+	private function normalizeTAmounts(&$TAmounts)
+	{
+		foreach ($TAmounts as $key => &$value)
+		{
+			if ($value === '') $value = 0;
+		}
 	}
 }

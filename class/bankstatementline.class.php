@@ -162,7 +162,7 @@ class BankStatementLine extends CommonObjectLine
 	{
 		$ret = array();
 		foreach ($this->fields as $name => $fieldDescriptor) {
-			$ret[$name] = $this->{$name};
+			$ret[$name] = $this->{$name === 'rowid' ? 'id' : $name};
 		}
 		$ret['error'] = $this->error;
 		return $ret;
@@ -341,5 +341,4 @@ class BankStatementLine extends CommonObjectLine
 				return parent::showOutputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss);
 		}
 	}
-
 }
