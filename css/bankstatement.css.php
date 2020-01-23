@@ -62,3 +62,6 @@ dd { display: inline-block; }
 	column-rule: solid 1px black;
 	*/
 }
+
+.monthinput { width: 2em; }
+.yearinput { width: 4em; }

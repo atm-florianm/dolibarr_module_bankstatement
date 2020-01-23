@@ -212,6 +212,37 @@ class BankStatementLine extends CommonObjectLine
 	}
 
 	/**
+	 * @param array $fieldKey
+	 * @return string
+	 */
+	public function showInputField($fieldKey)
+	{
+		$filterName = 'search_' . $fieldKey;
+		$filterInput = '<input type="text" name="%s" value="%s" />';
+		switch ($fieldKey) {
+			case 'date':
+				$monthFilterName = $filterName . '_month';
+				$yearFilterName = $filterName . '_year';
+				$yearFilterValue = intval(GETPOST($yearFilterName, 'int'));
+				if (!$yearFilterValue) $yearFilterValue = date('Y');
+				$monthFilterValue = intval(GETPOST($monthFilterName, 'int'));
+				if (!$monthFilterValue) $monthFilterValue = date('m');
+				$monthSelect = sprintf(
+					'<input class="monthinput" type="number" name="%s" value="%d" min="1" max="12" />',
+					$monthFilterName,
+					$monthFilterValue);
+				$yearSelect = sprintf(
+					'<input class="yearinput" type="number" name="%s" value="%d" min="%d" max="%d"/>',
+					$yearFilterName,
+					$yearFilterValue, date('Y') - 50, date('Y') + 50);
+				$filterInput = $monthSelect . $yearSelect;
+			default:
+				return parent::showInputField();
+		}
+		return $filterInput;
+	}
+
+	/**
 	 * Set statement line properties from the database record identified by $id
 	 * @param $id
 	 * @return int

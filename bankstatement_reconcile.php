@@ -53,15 +53,17 @@ $sqlCheckIdsHaveSameAccount='SELECT COUNT(DISTINCT fk_account) FROM ' . MAIN_DB_
 $transactionCompare = new TransactionCompare($db);
 $form = new Form($db);
 $transactionCompare->fetchAccount($accountId);
+$transactionCompare->load_transactions($TLineId);
 
 if ($actionApplyConciliation) {
 	$tpl = 'tpl/bankstatement.end.tpl.php';
 	$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
-	$transactionCompare->load_imported_transactions($TLineId);
+//	$transactionCompare->load_imported_transactions($TLineId);
+//	$transactionCompare->load_bank_transactions()
 	$transactionCompare->applyConciliation(GETPOST('TLine'));
 } else {
 	$tpl = 'tpl/bankstatement.check.tpl.php';
-	$transactionCompare->load_transactions($TLineId);
+//	$transactionCompare->load_transactions($TLineId);
 	$transactionCompare->compare_transactions();
 	$TTransactions = $transactionCompare->TImportedLines;
 }

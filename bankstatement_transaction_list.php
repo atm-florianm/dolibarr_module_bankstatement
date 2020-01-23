@@ -181,8 +181,25 @@ $(()=>{
 // Part to show record
 if ($action === 'view')
 {
-	$head = bankstatementPrepareHead($objectline);
-	dol_fiche_head($head, 'card', $langs->trans("BankStatementTransactions"), -1, $objectline->picto);
+//	print_barre_liste(
+//		$langs->trans("BankStatementTransactions"),
+//		$page,
+//		$_SERVER["PHP_SELF"],
+//		$param,
+//		$sortfield,
+//		$sortorder,
+//		$massactionbutton,
+//		$num,
+//		$nbtotalofrecords,
+//		'title_companies',
+//		0,
+//		$newcardbutton,
+//		'',
+//		$limit
+//	);
+
+
+
 
 	// show confirmation pop-in for certain actions
 	$actionsRequiringConfirmation = array('delete', 'deleteline');
@@ -223,9 +240,6 @@ if ($action === 'view')
 
 	$morehtmlref = '<div class="refidno">';
 	$morehtmlref .= '</div>';
-
-
-	dol_banner_tab($objectline, 'ref', $linkback, 1, 'ref', 'ref', $morehtmlref);
 
 	print '<div class="fichecenter">';
 	print '<div class="fichehalfleft">';
@@ -284,15 +298,21 @@ if ($action === 'view')
 	print '<colgroup id="massactionselect">';
 	print '<col class="col_massaction" />';
 	print '</colgroup>';
-
 	print '<thead>';
 	print '<tr class="liste_titre">';
-	/*foreach ($objectline->fields as $fieldName => $fieldParams) {
+	foreach ($objectline->fields + $objectline->dynamicFields as $fieldName => $fieldParams) {
+		if (empty($arrayfields['t.' . $fieldName]['checked'])) {
+			continue;
+		}
+		$cssForFilter = (empty($fieldParams['css']) ? '' : $fieldParams['css']);
+		$filterName = 'search_' . $fieldName;
+		$filterValue = dol_escape_htmltag($search[$fieldName]);
 		if (!$fieldParams['visible']) continue;
 		print '<th class="search_col_' . $fieldName . '">';
-		// TODO : champs de recherche auto en fonction des paramètres de $objectline->fields
+//		print $objectline->getFieldFilterInput($fieldName);
+		print $objectline->showInputField($fieldName, $fieldName, $filterValue, '', '', 'search_');
 		print '</th>';
-	}*/
+	}
 	print '<th></th>';
 	print '</tr>';
 	print '<tr class="liste_titre">';
