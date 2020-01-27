@@ -48,12 +48,12 @@ class BankStatementLine extends CommonObjectLine
 	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
 	 */
 	public $fields=array(
-		'rowid'            => array('type'=>'integer',      'label'=>'TechnicalID',     'enabled'=>1, 'position'=>1, 'notnull'=>1, 'visible'=> 0, 'noteditable'=>'1', 'index'=>1, 'comment'=>"Id"),
-		'date'             => array('type'=>'date',         'label'=>'TransactionDate', 'enabled'=>1, 'position'=>2, 'notnull'=>1, 'visible'=> 1,),
-		'label'            => array('type'=>'varchar(128)', 'label'=>'Label',           'enabled'=>1, 'position'=>3, 'notnull'=>0, 'visible'=> 1,),
-		'amount'           => array('type'=>'double(24,8)', 'label'=>'Amount',          'enabled'=>1, 'position'=>4, 'notnull'=>1, 'visible'=> 1,),
-		'status'           => array('type'=>'integer',      'label'=>'Status',          'enabled'=>1, 'position'=>6, 'notnull'=>1, 'visible'=> 1, 'arrayofkeyval'=>array(0=>'Unreconciled', 1=>'Reconciled'),),
-		'fk_bankstatement' => array('type'=>'integer',      'label'=>'BankStatement',   'enabled'=>1, 'position'=>7, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'bankstatement_bankstatement.rowid',),
+		'rowid'            => array('type'=>'integer',      'label'=>'TechnicalID',     'enabled'=>1, 'position'=>1, 'notnull'=>1, 'visible'=> 0, 'noteditable'=>1, 'index'=>1, 'comment'=>"Id"),
+		'date'             => array('type'=>'date',         'label'=>'TransactionDate', 'enabled'=>1, 'position'=>2, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1,),
+		'label'            => array('type'=>'varchar(128)', 'label'=>'Label',           'enabled'=>1, 'position'=>3, 'notnull'=>0, 'visible'=> 1, 'noteditable'=>1,),
+		'amount'           => array('type'=>'double(24,8)', 'label'=>'Amount',          'enabled'=>1, 'position'=>4, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1,),
+		'status'           => array('type'=>'integer',      'label'=>'Status',          'enabled'=>1, 'position'=>6, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1, 'arrayofkeyval'=>array(0=>'Unreconciled', 1=>'Reconciled'),),
+		'fk_bankstatement' => array('type'=>'integer',      'label'=>'BankStatement',   'enabled'=>1, 'position'=>7, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1, 'foreignkey'=>'bankstatement_bankstatement.rowid',),
 //		'fk_payment'       => array('type'=>'integer',      'label'=>'BankPayment',     'enabled'=>1, 'position'=>8, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'paiement.rowid',),
 	);
 	public $rowid;
@@ -212,10 +212,19 @@ class BankStatementLine extends CommonObjectLine
 	}
 
 	/**
-	 * @param array $fieldKey
+	 * Overrides CommonObject::showInputField
+	 *
+	 * @param array $fieldParams           Properties of the field
+	 * @param string $fieldKey             Name of the field
+	 * @param string $value                Current field value
+	 * @param string $additionalAttributes Additional HTML tag attributes
+	 * @param string $nameSuffix           Will be appended to the name of the input element
+	 * @param string $namePrefix           Will be prepended to the name of the input element
+	 * @param int|string $morecss          Additional CSS to set the width of the input element
+	 * @param int $nonewbutton             If true, do not display a "new" button on fields that link to an object
 	 * @return string
 	 */
-	public function showInputField($fieldKey)
+	public function showInputField($fieldParams, $fieldKey, $value, $additionalAttributes = '', $nameSuffix = '', $namePrefix = '', $morecss = 0, $nonewbutton = 0)
 	{
 		$filterName = 'search_' . $fieldKey;
 		$filterInput = '<input type="text" name="%s" value="%s" />';
@@ -237,7 +246,16 @@ class BankStatementLine extends CommonObjectLine
 					$yearFilterValue, date('Y') - 50, date('Y') + 50);
 				$filterInput = $monthSelect . $yearSelect;
 			default:
-				return parent::showInputField();
+				$filterInput = parent::showInputField(
+					$fieldParams,
+					$fieldKey,
+					$value,
+					$additionalAttributes,
+					$nameSuffix,
+					$namePrefix,
+					$morecss,
+					$nonewbutton
+				);
 		}
 		return $filterInput;
 	}

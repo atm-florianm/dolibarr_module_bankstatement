@@ -29,11 +29,14 @@ const STATUS_RECONCILED   = 1;
 /**
  * Prepare admin pages header
  *
+ * Add one tab for each bank account in the current entity.
+ *
  * @return array
  */
 function bankstatementAdminPrepareHead()
 {
-	global $langs, $conf;
+	global $langs, $conf, $db;
+	require_once DOL_DOCUMENT_ROOT.'/core/lib/accounting.lib.php';
 
 	$langs->load("bankstatement@bankstatement");
 
@@ -42,12 +45,29 @@ function bankstatementAdminPrepareHead()
 
 	$head[$h][0] = dol_buildpath("/bankstatement/admin/setup.php", 1);
 	$head[$h][1] = $langs->trans("Settings");
-	$head[$h][2] = 'settings';
+	$head[$h][2] = 'default';
 	$h++;
-	$head[$h][0] = dol_buildpath("/bankstatement/admin/about.php", 1);
-	$head[$h][1] = $langs->trans("About");
-	$head[$h][2] = 'about';
-	$h++;
+
+	$sql = "SELECT DISTINCT account.rowid, account.label FROM ".MAIN_DB_PREFIX."bank_account as account"
+	     . " WHERE account.entity IN (" . getEntity('bank_account') . ")"
+	     . " ORDER BY account.rowid";
+
+	$resql = $db->query($sql);
+
+	if (!$resql) {
+		setEventMessages("Error ".$db->lasterror(), array(), 'errors');
+		return array();
+	}
+	$nbAccounts = $db->num_rows($resql);
+
+	for ($i = 0; $i < $nbAccounts; $i++, $h++) {
+		$obj = $db->fetch_object($resql);
+		if (empty($obj)) break;
+		$head[$h][0] = dol_buildpath("/bankstatement/admin/setup.php?accountId=" . $obj->rowid, 1);
+		$head[$h][1] = $langs->trans("AccountSettings", $obj->label);
+		$head[$h][2] = 'account' . $obj->rowid;
+	}
+
 
 	// Show more tabs from modules
 	// Entries must be declared in modules descriptor with line

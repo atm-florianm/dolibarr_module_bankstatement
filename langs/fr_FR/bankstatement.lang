@@ -39,10 +39,13 @@ BankStatementSetupPage = Ici, vous pouvez configurer le module Import de relevé
 ValueSaved=Option enregistrée :
 ValueUnchanged=Option déjà enregistrée
 NoValueToSave=Toutes les options sont déjà enregistrées
-Settings = Réglages
+Settings = Réglages par défaut
+AccountSettings = Compte "%s"
+AccountNotFound = Compte %d non trouvé
 
 # Module rights
-ImportAndReconcileBankStatements=Importer et rapprocher des relevés de banque
+ReadBankStatements=Consulter des relevés de banque importés
+WriteBankStatements=Importer, rapprocher, modifier et supprimer des relevés de banque
 
 # Module configuration / setup.php (admin)
 BANKSTATEMENT_SEPARATOR=Séparateur des données du fichier

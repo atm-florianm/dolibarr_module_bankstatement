@@ -36,36 +36,7 @@ global $langs, $user;
 require_once DOL_DOCUMENT_ROOT . "/core/lib/admin.lib.php";
 require_once '../lib/bankstatement.lib.php';
 
-// Translations
-$langs->loadLangs(array("admin", "bankstatement@bankstatement"));
-
-// Access control
-if (! $user->admin) accessforbidden();
-
-// Parameters
-$action = GETPOST('action', 'alpha');
-$backtopage = GETPOST('backtopage', 'alpha');
-
-if ($action === 'ajax_set_const') {
-	$name = GETPOST('name', 'alpha');
-
-	if (!preg_match('/^BANKSTATEMENT_/', $name)) {
-		echo 'Error: modifying consts other than BANKSTATEMENT_ not allowed.';
-		exit;
-	}
-
-	$entity = GETPOST('entity', 'int');
-	$value = GETPOST('value');
-
-	if ($user->admin)
-	{
-		dolibarr_set_const($db, $name, $value, 'chaine', 0, '', $entity);
-	}
-	exit;
-}
-
 // Configuration data
-
 $separatorChoices = array(
 	'Comma'      => ',',
 	'Semicolon'  => ';',
@@ -94,8 +65,8 @@ $specificParameters=array(
 	'BANKSTATEMENT_DIRECTION_CREDIT'                    => array('depends' => 'BANKSTATEMENT_USE_DIRECTION',),
 	'BANKSTATEMENT_DIRECTION_DEBIT'                     => array('depends' => 'BANKSTATEMENT_USE_DIRECTION',),
 	'BANKSTATEMENT_HEADER'                              => array('inputtype' => 'bool',),
-//	'BANKSTATEMENT_LINE_SEPARATOR'                      => array('inputtype' => 'select', 'options' => $lineSeparatorChoices,),
-//	'BANKSTATEMENT_HISTORY_IMPORT'                      => array('inputtype' => 'bool',),
+	//	'BANKSTATEMENT_LINE_SEPARATOR'                      => array('inputtype' => 'select', 'options' => $lineSeparatorChoices,),
+	//	'BANKSTATEMENT_HISTORY_IMPORT'                      => array('inputtype' => 'bool',),
 	'BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD'    => array('inputtype' => 'bool',),
 	'BANKSTATEMENT_ALLOW_DRAFT_INVOICE'                 => array('inputtype' => 'bool',),
 	'BANKSTATEMENT_UNCHECK_ALL_LINES'                   => array('inputtype' => 'bool',),
@@ -103,18 +74,87 @@ $specificParameters=array(
 	'BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL' => array('inputtype' => 'bool',),
 	'BANKSTATEMENT_ALLOW_FREELINES'                     => array('inputtype' => 'bool',)
 );
-$arrayofparameters = array_map(
+$TConstParameter = array_map(
 	function($specificParameters) use ($defaultParameters) {
 		return $specificParameters + $defaultParameters; // specific parameters override default
 	},
 	$specificParameters
 );
 
+// Translations
+$langs->loadLangs(array("admin", "bankstatement@bankstatement"));
+
+// Access control
+if (! $user->admin) accessforbidden();
+
+// Parameters
+$action = GETPOST('action', 'alpha');
+$backtopage = GETPOST('backtopage', 'alpha');
+
+// a different setup can be saved for each bank account.
+$accountId = GETPOST('accountId', 'int');
+
+if (!empty($accountId)) {
+	$activeTabName = 'account' . intval($accountId);
+	require_once DOL_DOCUMENT_ROOT . '/compta/bank/class/account.class.php';
+	$account = new Account($db);
+	if ($account->fetch($accountId) <= 0) {
+		setEventMessages($langs->trans('AccountNotFound', $accountId), array(), 'errors');
+		exit; // TODO: redirect? in any case, we should not use setEventMessages because this could be an ajax call.
+	}
+	// load account-specific conf (currently saved as a JSON bank_account extrafield)
+	$account->fetch_optionals();
+	$rawAccountConf = $account->array_options['options_bank_statement_import_format'];
+	if (empty($rawAccountConf)) {
+		$accountConf = array();
+	} else {
+		$accountConf = json_decode($rawAccountConf, true);
+	}
+	foreach ($TConstParameter as $key => $constParameter) {
+		if (isset($conf->global->{$key}) && !isset($accountConf[$key])) {
+			$accountConf[$key] = $conf->global->{$key};
+		} elseif ($constParameter['inputtype'] === 'bool') {
+			$accountConf[$key] = '';
+		}
+	}
+} else {
+	$activeTabName = 'default';
+}
+
+if ($action === 'ajax_set_const') {
+	$name = GETPOST('name', 'alpha');
+
+
+	if (!$user->admin) {
+		echo '{"response": "failure", "reason": "NotAdmin"}';
+		exit;
+	} elseif (!preg_match('/^BANKSTATEMENT_/', $name)) {
+		echo '{"response": "failure", "reason": "ConstKeyMustBeBankstatement"}';
+		exit;
+	} else {
+		$value = GETPOST('value');
+		if (!empty($accountId)) {
+			$accountConf[$name] = $value;
+			$rawAccountConf = json_encode($accountConf);
+			if (strlen($rawAccountConf) > 1024) {
+				// TODO: handle error (extrafield size is 1024)
+			}
+			$account->array_options['options_bank_statement_import_format'] = json_encode($accountConf);
+			$account->insertExtraFields();
+		} else {
+			dolibarr_set_const($db, $name, $value, 'chaine', 0, '', $conf->entity);
+		}
+		echo '{"response": "success"}';
+		exit;
+	}
+}
+
 /*
  * Main View
  */
 $page_name = "BankStatementSetup";
 llxHeader('', $langs->trans($page_name));
+jsValuesAsJSON(array('accountId' => $accountId), 'window.jsonDataArray');
 
 // Subheader
 $linkback = '<a href="'.($backtopage?$backtopage:DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1').'">'.$langs->trans("BackToModuleList").'</a>';
@@ -123,7 +163,21 @@ print load_fiche_titre($langs->trans($page_name), $linkback, 'object_bankstateme
 
 // Configuration header
 $head = bankstatementAdminPrepareHead();
-dol_fiche_head($head, 'settings', '', -1, "bankstatement@bankstatement");
+
+dol_fiche_head($head, $activeTabName, '', -1, "bankstatement@bankstatement");
+
+function get_conf_value($confName) {
+	global $conf, $langs, $accountId, $account, $accountConf;
+	$globalConfValue = isset($conf->global->{$confName}) ? $conf->global->{$confName} : '';
+	if (!empty($accountId)) {
+		// account-specific conf
+		$confValue = isset($accountConf[$confName]) ? $accountConf[$confName] : $globalConfValue;
+	} else {
+		// global / default conf
+		$confValue = $globalConfValue;
+	}
+	return $confValue;
+}
 
 function get_conf_label($confName, $parameters, $form) {
 	global $langs;
@@ -145,7 +199,7 @@ function get_conf_label($confName, $parameters, $form) {
 
 function get_conf_input($confName, $parameters) {
 	global $conf, $langs;
-	$confValue = isset($conf->global->{$confName}) ? $conf->global->{$confName} : '';
+	$confValue = get_conf_value($confName);
 	$inputAttrs = sprintf(
 		'name="%s" id="%s" class="%s" data-saved-value="%s"',
 		htmlspecialchars($confName, ENT_COMPAT),
@@ -230,7 +284,7 @@ $form = new Form($db);
 	</thead>
 	<tbody>
 	<?php
-	foreach ($arrayofparameters as $confName => $confParams) {
+	foreach ($TConstParameter as $confName => $confParams) {
 		$tableRowClass = 'oddeven';
 		if (!empty($confParams['depends']) && empty($conf->global->{$confParams['depends']})) {
 			// do not show configuration input if it depends on a disabled option
@@ -242,8 +296,8 @@ $form = new Form($db);
 			. '<td>%s</td>'
 			. '</tr>',
 			$tableRowClass,
-			get_conf_label($confName, $arrayofparameters[$confName], $form),
-			get_conf_input($confName, $arrayofparameters[$confName])
+			get_conf_label($confName, $TConstParameter[$confName], $form),
+			get_conf_input($confName, $TConstParameter[$confName])
 		);
 	}
 	?>

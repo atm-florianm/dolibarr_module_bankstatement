@@ -24,6 +24,7 @@
 
 // Put here all includes required by your class file
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
+require_once DOL_DOCUMENT_ROOT.'/compta/bank/class/account.class.php';
 require_once 'bankstatementline.class.php';
 dol_include_once('/bankstatement/core/modules/bankstatement/mod_bankstatement_standard.php');
 dol_include_once('/bankstatement/lib/bankstatement.lib.php');
@@ -91,20 +92,20 @@ class BankStatement extends CommonObject
 	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
 	 */
 	public $fields=array(
-		'rowid'             => array('type'=>'integer',      'label'=>'TechnicalID',      'enabled'=>1, 'position'=>1,    'notnull'=>1,  'visible'=> 0, 'noteditable'=>1, 'index'=>1, 'comment'=>"Id"),
-		'ref'               => array('type'=>'varchar(128)', 'label'=>'Ref',              'enabled'=>1, 'position'=>10,   'notnull'=>1,  'visible'=> 4, 'noteditable'=>1, 'default'=>'(PROV)', 'index'=>1, 'searchall'=>1, 'showoncombobox'=>'1', 'comment'=>"Reference"),
-		'label'             => array('type'=>'varchar(128)', 'label'=>'Label',            'enabled'=>1, 'position'=>11,   'notnull'=>0,  'visible'=> 1, 'searchall'=>1,),
-		'status'            => array('type'=>'integer',      'label'=>'Status',           'enabled'=>1, 'position'=>12,   'notnull'=>1,  'visible'=> 4, 'noteditable'=>1, 'arrayofkeyval'=>array(self::STATUS_UNRECONCILED=>'Unreconciled', self::STATUS_RECONCILED=>'Reconciled'),),
-		'fk_account'        => array('type'=>'integer',      'label'=>'Account',          'enabled'=>1, 'position'=>13,   'notnull'=>1,  'visible'=> 1, 'foreignkey'=>'bank_account.rowid',),
-		'date_start'        => array('type'=>'date',         'label'=>'DateStart',        'enabled'=>1, 'position'=>20,   'notnull'=>0,  'visible'=> -4,),
-		'date_end'          => array('type'=>'date',         'label'=>'DateEnd',          'enabled'=>1, 'position'=>21,   'notnull'=>0,  'visible'=> -4,),
-		'tms'               => array('type'=>'timestamp',    'label'=>'DateModification', 'enabled'=>1, 'position'=>501,  'notnull'=>0,  'visible'=> 0,),
-		'fk_user_import'    => array('type'=>'integer',      'label'=>'UserImport',       'enabled'=>1, 'position'=>502,  'notnull'=>0,  'visible'=> 0, 'foreignkey'=>'user.rowid',),
-		'date_import'       => array('type'=>'date',         'label'=>'DateImport',       'enabled'=>1, 'position'=>503,  'notnull'=>0,  'visible'=> 0, 'noteditable'=>1),
-		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',    'enabled'=>1, 'position'=>504,  'notnull'=>0,  'visible'=> -4, 'foreignkey'=>'user.rowid',),
-//		'date_reconcile'    => array('type'=>'date',         'label'=>'DateReconcile',    'enabled'=>1, 'position'=>505,  'notnull'=>0,  'visible'=> 4,),
-		'import_key'        => array('type'=>'varchar(14)',  'label'=>'ImportId',         'enabled'=>1, 'position'=>1000, 'notnull'=>-1, 'visible'=> 0,),
-		'entity'            => array('type'=>'integer',      'label'=>'Entity',           'enabled'=>1, 'position'=>1000, 'notnull'=>0,  'visible'=> 0, 'foreignkey'=>'entity.rowid',),
+		'rowid'             => array('type'=>'integer',      'label'=>'TechnicalID',      'enabled'=>1, 'position'=>1,    'notnull'=>1,  'visible'=>  0, 'noteditable'=>1, 'index'=>1, 'comment'=>"Id"),
+		'ref'               => array('type'=>'varchar(128)', 'label'=>'Ref',              'enabled'=>1, 'position'=>10,   'notnull'=>1,  'visible'=>  4, 'noteditable'=>1, 'default'=>'(PROV)', 'index'=>1, 'searchall'=>1, 'showoncombobox'=>'1', 'comment'=>"Reference"),
+		'label'             => array('type'=>'varchar(128)', 'label'=>'Label',            'enabled'=>1, 'position'=>11,   'notnull'=>0,  'visible'=>  1, 'searchall'=>1,),
+		'status'            => array('type'=>'integer',      'label'=>'Status',           'enabled'=>1, 'position'=>12,   'notnull'=>1,  'visible'=>  4, 'noteditable'=>1, 'arrayofkeyval'=>array(self::STATUS_UNRECONCILED=>'Unreconciled', self::STATUS_RECONCILED=>'Reconciled'),),
+		'fk_account'        => array('type'=>'integer',      'label'=>'Account',          'enabled'=>1, 'position'=>13,   'notnull'=>1,  'visible'=>  1, 'foreignkey'=>'bank_account.rowid',),
+		'date_start'        => array('type'=>'date',         'label'=>'DateStart',        'enabled'=>1, 'position'=>20,   'notnull'=>0,  'visible'=> -4, 'noteditable'=>1,),
+		'date_end'          => array('type'=>'date',         'label'=>'DateEnd',          'enabled'=>1, 'position'=>21,   'notnull'=>0,  'visible'=> -4, 'noteditable'=>1,),
+		'tms'               => array('type'=>'timestamp',    'label'=>'DateModification', 'enabled'=>1, 'position'=>501,  'notnull'=>0,  'visible'=>  0, 'noteditable'=>1,),
+		'fk_user_import'    => array('type'=>'integer',      'label'=>'UserImport',       'enabled'=>1, 'position'=>502,  'notnull'=>0,  'visible'=>  0, 'noteditable'=>1, 'foreignkey'=>'user.rowid',),
+		'date_import'       => array('type'=>'date',         'label'=>'DateImport',       'enabled'=>1, 'position'=>503,  'notnull'=>0,  'visible'=>  0, 'noteditable'=>1),
+		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',    'enabled'=>1, 'position'=>504,  'notnull'=>0,  'visible'=> -4, 'noteditable'=>1, 'foreignkey'=>'user.rowid',),
+//		'date_reconcile'    => array('type'=>'date',         'label'=>'DateReconcile',    'enabled'=>1, 'position'=>505,  'notnull'=>0,  'visible'=>  4, 'noteditable'=>1,),
+		'import_key'        => array('type'=>'varchar(14)',  'label'=>'ImportId',         'enabled'=>1, 'position'=>1000, 'notnull'=>-1, 'visible'=>  0, 'noteditable'=>1,),
+		'entity'            => array('type'=>'integer',      'label'=>'Entity',           'enabled'=>1, 'position'=>1000, 'notnull'=>0,  'visible'=>  0, 'noteditable'=>1, 'foreignkey'=>'entity.rowid',),
 	);
 	public $rowid;
 	public $ref;
@@ -262,6 +263,8 @@ class BankStatement extends CommonObject
 		}
 
 		$this->fk_account = $fk_account;
+
+		$this->CSVFormat->loadFromAccountExtrafield($this->db, $fk_account);
 
 		$this->ref = $this->getNextNumRef();
 
@@ -1460,5 +1463,32 @@ class BankStatementFormat
 		}
 		$standardRow['amount'] = abs($rawAmount);
 		$standardRow['direction'] = getAmountType($rawAmount);
+	}
+
+	/**
+	 * @param DoliDB $db
+	 * @param int    $fk_account
+	 */
+	public function loadFromAccountExtrafield($db, $fk_account)
+	{
+		$account = new Account($db);
+		if ($account->fetch($fk_account) <= 0) {
+			var_dump($fk_account);
+			// TODO error handling
+		}
+		$account->fetch_optionals();
+		$rawJsonConf = $account->array_options['options_bank_statement_import_format'];
+		if (!$rawJsonConf) return;
+		$accountConf = json_decode($rawJsonConf);
+
+		$this->mapping    = explode(';', $accountConf->BANKSTATEMENT_MAPPING)?: $this->mapping     ;
+		$this->dateFormat = $accountConf->BANKSTATEMENT_DATE_FORMAT?: $this->dateFormat  ;
+		$this->enclosure  = '"'?: $this->enclosure   ;
+		$this->separator  = $accountConf->BANKSTATEMENT_SEPARATOR?: $this->separator   ;
+		$this->lineEnding = null?: $this->lineEnding  ;
+		$this->columnMode = false?: $this->columnMode  ;
+		$this->directionMapping = array($accountConf->BANKSTATEMENT_DIRECTION_CREDIT => DIRECTION_CREDIT, $accountConf->BANKSTATEMENT_DIRECTION_DEBIT => DIRECTION_DEBIT)?: $this->directionMapping  ;
+		$this->useDirection     = $accountConf->BANKSTATEMENT_USE_DIRECTION?: $this->useDirection      ;
+		$this->skipFirstLine    = $accountConf->BANKSTATEMENT_HEADER?: $this->skipFirstLine     ;
 	}
 }
