@@ -234,7 +234,7 @@ if ($action === 'view')
 	// Object card
 	// ------------------------------------------------------------
 
-	print '<form action="bankstatement_reconcile.php">';
+	print '<form>';
 	print $massactionbutton;
 	$linkback = '<a href="'.dol_buildpath('/bankstatement/bankstatement_list.php', 1).'?restore_lastsearch_values=1'.(!empty($socid) ? '&socid='.$socid : '').'">'.$langs->trans("BackToList").'</a>';
 

@@ -312,6 +312,15 @@ class BankStatement extends CommonObject
 				continue;
 			}
 
+			if ($this->date_end < $line->date) {
+				$this->date_end = $line->date;
+				var_dump($this->date_end);
+			}
+			if ($this->date_start > $line->date) {
+				$this->date_start = $line->date;
+				var_dump($this->date_end);
+			}
+
 			if ($line->error) {
 				$TBankStatementInvalidLine[] = $line;
 			} else {
@@ -324,6 +333,7 @@ class BankStatement extends CommonObject
 			$this->db->rollback();
 		}
 
+		$this->update($user);
 		return true;
 	}
 
@@ -890,6 +900,8 @@ class BankStatement extends CommonObject
 		switch($action) {
 			case 'delete':
 				$btnClass = 'butActionDelete';
+				$urlParameters['action'] = $action;
+				$urlParameters['id']     = $this->id;
 				break;
 			default:
 				$btnClass = 'butAction';
@@ -1133,7 +1145,7 @@ class BankStatement extends CommonObject
 		{
 			case 'fk_account':
 				$form = new Form($this->db);
-				$form->select_comptes(-1, 'fk_account', 0, 'courant <> 2', 1, 'required');
+				$form->select_comptes($this->fk_account ?: -1, 'fk_account', 0, 'courant <> 2', 1, 'required');
 				// the empty select should have empty value or the 'required' attribute will be useless
 				echo '<script>$("#selectfk_account option[value=-1]").attr("value", "")</script>';
 				return '';

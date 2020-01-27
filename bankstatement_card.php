@@ -95,12 +95,11 @@ include DOL_DOCUMENT_ROOT.'/core/actions_fetchobject.inc.php'; // Must be includ
 //$isdraft = (($object->statut == $object::STATUS_DRAFT) ? 1 : 0);
 //$result = restrictedArea($user, 'bankstatement', $object->id, '', '', 'fk_soc', 'rowid', $isdraft);
 
-$permissiontoread = $user->rights->bankstatement->bankstatement->read;
-$permissiontoadd = $user->rights->bankstatement->bankstatement->write; // Used by the include of actions_addupdatedelete.inc.php and actions_lineupdown.inc.php
-$permissiontoedit = $user->rights->bankstatement->bankstatement->write;
-$permissiontodelete = $user->rights->bankstatement->bankstatement->write;
-$permissiondellink = $user->rights->bankstatement->bankstatement->write; // Used by the include of actions_dellink.inc.php
-
+$permissiontoread = $user->rights->bankstatement->read;
+$permissiontoadd = $user->rights->bankstatement->write; // Used by the include of actions_addupdatedelete.inc.php and actions_lineupdown.inc.php
+$permissiontoedit = $user->rights->bankstatement->write;
+$permissiontodelete = $user->rights->bankstatement->write;
+$permissiondellink = $user->rights->bankstatement->write; // Used by the include of actions_dellink.inc.php
 
 $upload_dir = $conf->bankstatement->multidir_output[isset($object->entity) ? $object->entity : 1];
 
@@ -223,36 +222,7 @@ elseif ($action === 'add') {
 	}
 }
 elseif ($action === 'reconcile') {
-	// TODO : écran de rapprochement/création d’écritures ; à voir si sur cette card ou sur bankstatement_reconcile.php
-	//        ou sur les 2 avec des fonctions communes factorisées
-	print load_fiche_titre($langs->trans("BankStatement"));
-	$sqlSelect = array('b.rowid', 'b.label', 'b.rappro', 'b.num_releve', 'b.fk_account', 'b.amount', 'b.datev', 'b.dateo');
-	$sql = 'SELECT ' . join(', ', $sqlSelect) .' FROM ' . MAIN_DB_PREFIX . 'bank AS b'
-		. ' WHERE b.fk_account = ' . $object->fk_account . ';';
-	$resql = $db->query($sql);
-	echo '<table class="border centpercent">';
-	echo '<thead>';
-	printf(
-		'<tr class="liste_titre"><th>%s</th> <th>%s</th>',
-		$langs->trans('Label'),
-		$langs->trans('Amount')
-	);
-	echo '</thead>';
-	echo '<tbody>';
-
-	if ($resql) {
-		$n = $db->num_rows($resql);
-		for ($i = 0; $i < $n; $i++) {
-			$obj = $db->fetch_object($resql);
-			printf(
-				'<tr><td>%s</td> <td>%s</td></tr>',
-				$obj->label,
-				$obj->amount
-			);
-		}
-	}
-	echo '</tbody>';
-	echo '</table>';
+	// TODO : rediriger vers bankstatement_reconcile.php
 }
 
 // Part to edit record
@@ -440,7 +410,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 		if (empty($reshook))
 		{
 			if ($object->status === $object::STATUS_UNRECONCILED) {
-				echo $object->getActionButton('reconcile', false);
+				//echo $object->getActionButton('reconcile', false);
 				echo $object->getActionButton('delete', empty($permissiontodelete));
 				echo $object->getActionButton('edit',   empty($permissiontoedit));
 			}
