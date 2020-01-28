@@ -222,55 +222,6 @@ class BankStatementLine extends CommonObject
 	}
 
 	/**
-	 * Overrides CommonObject::showInputField
-	 *
-	 * @param array $fieldParams           Properties of the field
-	 * @param string $fieldKey             Name of the field
-	 * @param string $value                Current field value
-	 * @param string $additionalAttributes Additional HTML tag attributes
-	 * @param string $nameSuffix           Will be appended to the name of the input element
-	 * @param string $namePrefix           Will be prepended to the name of the input element
-	 * @param int|string $morecss          Additional CSS to set the width of the input element
-	 * @param int $nonewbutton             If true, do not display a "new" button on fields that link to an object
-	 * @return string
-	 */
-	public function showInputField($fieldParams, $fieldKey, $value, $additionalAttributes = '', $nameSuffix = '', $namePrefix = '', $morecss = 0, $nonewbutton = 0)
-	{
-		$filterName = 'search_' . $fieldKey;
-		$filterInput = '<input type="text" name="%s" value="%s" />';
-		switch ($fieldKey) {
-			case 'date':
-				$monthFilterName = $filterName . '_month';
-				$yearFilterName = $filterName . '_year';
-				$yearFilterValue = intval(GETPOST($yearFilterName, 'int'));
-				if (!$yearFilterValue) $yearFilterValue = date('Y');
-				$monthFilterValue = intval(GETPOST($monthFilterName, 'int'));
-				if (!$monthFilterValue) $monthFilterValue = date('m');
-				$monthSelect = sprintf(
-					'<input class="monthinput" type="number" name="%s" value="%d" min="1" max="12" />',
-					$monthFilterName,
-					$monthFilterValue);
-				$yearSelect = sprintf(
-					'<input class="yearinput" type="number" name="%s" value="%d" min="%d" max="%d"/>',
-					$yearFilterName,
-					$yearFilterValue, date('Y') - 50, date('Y') + 50);
-				$filterInput = $monthSelect . $yearSelect;
-			default:
-				$filterInput = parent::showInputField(
-					$fieldParams,
-					$fieldKey,
-					$value,
-					$additionalAttributes,
-					$nameSuffix,
-					$namePrefix,
-					$morecss,
-					$nonewbutton
-				);
-		}
-		return $filterInput;
-	}
-
-	/**
 	 * Set statement line properties from the database record identified by $id
 	 * @param $id
 	 * @return int
@@ -425,5 +376,54 @@ class BankStatementLine extends CommonObject
 			default:
 				return parent::showOutputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss);
 		}
+	}
+
+	/**
+	 * Overrides CommonObject::showInputField
+	 *
+	 * @param array $fieldParams           Properties of the field
+	 * @param string $fieldKey             Name of the field
+	 * @param string $value                Current field value
+	 * @param string $additionalAttributes Additional HTML tag attributes
+	 * @param string $nameSuffix           Will be appended to the name of the input element
+	 * @param string $namePrefix           Will be prepended to the name of the input element
+	 * @param int|string $morecss          Additional CSS to set the width of the input element
+	 * @param int $nonewbutton             If true, do not display a "new" button on fields that link to an object
+	 * @return string
+	 */
+	public function showInputField($fieldParams, $fieldKey, $value, $additionalAttributes = '', $nameSuffix = '', $namePrefix = '', $morecss = 0, $nonewbutton = 0)
+	{
+		$filterName = 'search_' . $fieldKey;
+		$filterInput = '<input type="text" name="%s" value="%s" />';
+		switch ($fieldKey) {
+			case 'date':
+				$monthFilterName = $filterName . '_month';
+				$yearFilterName = $filterName . '_year';
+				$yearFilterValue = intval(GETPOST($yearFilterName, 'int'));
+				if (!$yearFilterValue) $yearFilterValue = date('Y');
+				$monthFilterValue = intval(GETPOST($monthFilterName, 'int'));
+				if (!$monthFilterValue) $monthFilterValue = date('m');
+				$monthSelect = sprintf(
+					'<input class="monthinput" type="number" name="%s" value="%d" min="1" max="12" />',
+					$monthFilterName,
+					$monthFilterValue);
+				$yearSelect = sprintf(
+					'<input class="yearinput" type="number" name="%s" value="%d" min="%d" max="%d"/>',
+					$yearFilterName,
+					$yearFilterValue, date('Y') - 50, date('Y') + 50);
+				$filterInput = $monthSelect . $yearSelect;
+			default:
+				$filterInput = parent::showInputField(
+					$fieldParams,
+					$fieldKey,
+					$value,
+					$additionalAttributes,
+					$nameSuffix,
+					$namePrefix,
+					$morecss,
+					$nonewbutton
+				);
+		}
+		return $filterInput;
 	}
 }
