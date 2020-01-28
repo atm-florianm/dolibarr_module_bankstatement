@@ -147,7 +147,7 @@ window.addEventListener('load', function() {
 	 * conf, but if we are saving an account-specific conf, it should be saved as JSON in an extrafield
 	 * and not in llx_const.
 	 */
-	if (window.jsonDataArray.accountId) {
+	if (window.jsonDataArray && window.jsonDataArray.accountId) {
 		console.log('jsonDataArray.accountId: ' , jsonDataArray.accountId);
 		// ensure other events get registered before we turn them off: setTimeout puts the call
 		// at the end of the call queue

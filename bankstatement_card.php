@@ -87,6 +87,7 @@ foreach ($object->fields as $key => $val)
 if (empty($action) && empty($id) && empty($ref)) $action = 'view';
 
 // Load object
+
 include DOL_DOCUMENT_ROOT.'/core/actions_fetchobject.inc.php'; // Must be include, not include_once.
 
 // Security check - Protection if external user
@@ -125,9 +126,11 @@ if (empty($reshook))
 		}
 	}
 	$triggermodname = 'BANKSTATEMENT_BANKSTATEMENT_MODIFY'; // Name of trigger action code to execute when we modify record
-
 	// Actions cancel, add, update, update_extras, confirm_validate, confirm_delete, confirm_deleteline, confirm_clone, confirm_close, confirm_setdraft, confirm_reopen
-	include DOL_DOCUMENT_ROOT.'/core/actions_addupdatedelete.inc.php';
+
+	if ($action !== 'add') {
+		include DOL_DOCUMENT_ROOT.'/core/actions_addupdatedelete.inc.php';
+	}
 
 	// Actions when linking object each other
 	include DOL_DOCUMENT_ROOT.'/core/actions_dellink.inc.php';
@@ -148,9 +151,6 @@ if (empty($reshook))
 	include DOL_DOCUMENT_ROOT.'/core/actions_sendmails.inc.php';
 }
 
-
-
-
 /*
  * View
  *
@@ -161,14 +161,6 @@ $form = new Form($db);
 $formfile = new FormFile($db);
 
 llxHeader('', $langs->trans('BankStatement'), '');
-
-// Example : Adding jquery code
-print '<script type="text/javascript" language="javascript">
-$(()=>{
-	
-});
-</script>';
-
 
 // action 'create' = display the creation form
 if ($action === 'create') {
@@ -218,7 +210,9 @@ elseif ($action === 'add') {
 	if (isset($_FILES['CSVFile'])) {
 		$filePath = $_FILES['CSVFile']['tmp_name'];
 		$object->label = GETPOST('label', 'alpha');
-		$object->createFromCSVFile($filePath, GETPOST('fk_account', 'int'));
+		if (!$object->createFromCSVFile($filePath, GETPOST('fk_account', 'int'))) {
+			setEventMessages($langs->trans('UnableToCreateFromCSVFile'), array(), 'errors');
+		}
 	}
 }
 elseif ($action === 'reconcile') {
@@ -361,9 +355,9 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 		<input type="hidden" name="id" value="' . $object->id.'">
 		';
 
-		if (!empty($conf->use_javascript_ajax) && $object->status == 0) {
-			include DOL_DOCUMENT_ROOT.'/core/tpl/ajaxrow.tpl.php';
-		}
+//		if (!empty($conf->use_javascript_ajax) && $object->status == 0) {
+//			include DOL_DOCUMENT_ROOT.'/core/tpl/ajaxrow.tpl.php';
+//		}
 
 		print '<div class="div-table-responsive-no-min">';
 		if (!empty($object->lines) || ($object->status == $object::STATUS_UNRECONCILED && $permissiontoadd && $action != 'selectlines' && $action != 'editline'))
@@ -374,19 +368,6 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 		if (!empty($object->lines))
 		{
 			$object->printObjectLines($action, $mysoc, null, GETPOST('lineid', 'int'), 1);
-		}
-
-		// Form to add new line
-		if ($object->status == 0 && $permissiontoadd && $action != 'selectlines')
-		{
-			if ($action != 'editline')
-			{
-				// Add products/services form
-				$object->formAddObjectLine(1, $mysoc, $soc);
-
-				$parameters = array();
-				$reshook = $hookmanager->executeHooks('formAddObjectLine', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
-			}
 		}
 
 		if (!empty($object->lines) || ($object->status == $object::STATUS_UNRECONCILED && $permissiontoadd && $action != 'selectlines' && $action != 'editline'))

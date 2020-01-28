@@ -134,22 +134,22 @@ class BankStatement extends CommonObject
 	/**
 	 * @var int    Field with ID of parent key if this field has a parent
 	 */
-	//public $fk_element = 'fk_bankstatement';
+	public $fk_element = 'fk_bankstatement';
 
 	/**
 	 * @var int    Name of subtable class that manage subtable lines
 	 */
-	//public $class_element_line = 'BankStatementline';
+	public $class_element_line = 'BankStatementLine';
 
 	/**
 	 * @var array	List of child tables. To test if we can delete object.
 	 */
-	//protected $childtables=array();
+	protected $childtables=array('bankstatement_bankstatementdet');
 
 	/**
 	 * @var array	List of child tables. To know object to delete on cascade.
 	 */
-	//protected $childtablesoncascade=array('bankstatement_bankstatementdet');
+//	protected $childtablesoncascade=array('bankstatement_bankstatementdet');
 
 	/**
 	 * @var BankStatementLine[]     Array of subtable lines
@@ -253,9 +253,6 @@ class BankStatement extends CommonObject
 		 * Le format "direction" et le format "colonnes" sont gérés en ajoutant des indications ésotériques
 		 * non documentées (?) au mapping.
 		 *
-		 * Je pense qu’à terme, il faudrait gérer chacun de ces 3 formats spéciaux avec une conf séparée
-		 * et pouvoir enregistrer des profils de configuration (associables à des comptes)
-		 *
 		*/
 		global $conf, $user, $langs;
 		if (!is_file($filePath)) {
@@ -312,13 +309,11 @@ class BankStatement extends CommonObject
 				continue;
 			}
 
-			if ($this->date_end < $line->date) {
+			if ($this->date_end < $line->date || $this->date_end === null) {
 				$this->date_end = $line->date;
-				var_dump($this->date_end);
 			}
-			if ($this->date_start > $line->date) {
+			if ($this->date_start > $line->date || $this->date_start === null) {
 				$this->date_start = $line->date;
-				var_dump($this->date_end);
 			}
 
 			if ($line->error) {
@@ -331,9 +326,10 @@ class BankStatement extends CommonObject
 			$this->db->commit();
 		} else {
 			$this->db->rollback();
+			return false;
 		}
 
-		$this->update($user);
+		if ($this->update($user) <= 0) return false;
 		return true;
 	}
 
@@ -556,8 +552,7 @@ class BankStatement extends CommonObject
 	 */
 	public function delete(User $user, $notrigger = false)
 	{
-		return $this->deleteCommon($user, $notrigger);
-		//return $this->deleteCommon($user, $notrigger, 1);
+		return $this->deleteCommon($user, $notrigger, true);
 	}
 
 	/**

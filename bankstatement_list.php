@@ -78,6 +78,7 @@ $toselect   = GETPOST('toselect', 'array'); // Array of ids of elements selected
 $contextpage = GETPOST('contextpage', 'aZ') ?GETPOST('contextpage', 'aZ') : 'bankstatementlist'; // To manage different context of search
 $backtopage = GETPOST('backtopage', 'alpha'); // Go back to a dedicated page
 $optioncss  = GETPOST('optioncss', 'aZ'); // Option for the css output (always '' except when 'print')
+$confirmmassaction = GETPOST('confirmmassaction', 'alpha');
 
 $id = GETPOST('id', 'int');
 
@@ -169,9 +170,9 @@ if (is_array($extrafields->attributes[$object->table_element]['label']) && count
 $object->fields = dol_sort_array($object->fields, 'position');
 $arrayfields = dol_sort_array($arrayfields, 'position');
 
-$permissiontoread = $user->rights->bankstatement->bankstatement->read;
-$permissiontoadd = $user->rights->bankstatement->bankstatement->write;
-$permissiontodelete = $user->rights->bankstatement->bankstatement->delete;
+$permissiontoread = $user->rights->bankstatement->read;
+$permissiontoadd = $user->rights->bankstatement->write;
+$permissiontodelete = $user->rights->bankstatement->write;
 
 
 /*
@@ -354,9 +355,7 @@ if ($optioncss != '')     $param .= '&optioncss='.urlencode($optioncss);
 include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_param.tpl.php';
 
 // List of mass actions available
-$arrayofmassactions = array(
-	'delete'=>$langs->trans('Delete'),
-);
+$arrayofmassactions = array();
 if ($permissiontodelete) $arrayofmassactions['predelete'] = '<span class="fa fa-trash paddingrightonly"></span>'.$langs->trans("Delete");
 if (GETPOST('nomassaction', 'int') || in_array($massaction, array('presend', 'predelete'))) $arrayofmassactions = array();
 $massactionbutton = $form->selectMassAction('', $arrayofmassactions);
