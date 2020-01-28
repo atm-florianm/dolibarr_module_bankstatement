@@ -23,6 +23,7 @@
  */
 
 dol_include_once('/bankstatement/lib/bankstatement.lib.php');
+require_once DOL_DOCUMENT_ROOT . '/compta/bank/class/account.class.php';
 
 /**
  * Class for BankStatementLine.
@@ -48,13 +49,14 @@ class BankStatementLine extends CommonObject
 	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
 	 */
 	public $fields=array(
-		'rowid'            => array('type'=>'integer',      'label'=>'TechnicalID',     'enabled'=>1, 'position'=>1, 'notnull'=>1, 'visible'=> 0, 'noteditable'=>1, 'index'=>1, 'comment'=>"Id"),
-		'date'             => array('type'=>'date',         'label'=>'TransactionDate', 'enabled'=>1, 'position'=>2, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1,),
-		'label'            => array('type'=>'varchar(128)', 'label'=>'Label',           'enabled'=>1, 'position'=>3, 'notnull'=>0, 'visible'=> 1, 'noteditable'=>1,),
-		'amount'           => array('type'=>'double(24,8)', 'label'=>'Amount',          'enabled'=>1, 'position'=>4, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1,),
-		'status'           => array('type'=>'integer',      'label'=>'Status',          'enabled'=>1, 'position'=>6, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1, 'arrayofkeyval'=>array(0=>'Unreconciled', 1=>'Reconciled'),),
-		'fk_bankstatement' => array('type'=>'integer',      'label'=>'BankStatement',   'enabled'=>1, 'position'=>7, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1, 'foreignkey'=>'bankstatement_bankstatement.rowid',),
-//		'fk_payment'       => array('type'=>'integer',      'label'=>'BankPayment',     'enabled'=>1, 'position'=>8, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'paiement.rowid',),
+		'rowid'             => array('type'=>'integer',      'label'=>'TechnicalID',     'enabled'=>1, 'position'=>1, 'notnull'=>1, 'visible'=> 0, 'noteditable'=>1, 'index'=>1, 'comment'=>"Id"),
+		'date'              => array('type'=>'date',         'label'=>'TransactionDate', 'enabled'=>1, 'position'=>2, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1,),
+		'label'             => array('type'=>'varchar(128)', 'label'=>'Label',           'enabled'=>1, 'position'=>3, 'notnull'=>0, 'visible'=> 1, 'noteditable'=>1,),
+		'amount'            => array('type'=>'double(24,8)', 'label'=>'Amount',          'enabled'=>1, 'position'=>4, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1,),
+		'status'            => array('type'=>'integer',      'label'=>'Status',          'enabled'=>1, 'position'=>6, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1, 'arrayofkeyval'=>array(0=>'Unreconciled', 1=>'Reconciled'),),
+		'fk_bankstatement'  => array('type'=>'integer',      'label'=>'BankStatement',   'enabled'=>1, 'position'=>7, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1, 'foreignkey'=>'bankstatement_bankstatement.rowid',),
+//		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',   'enabled'=>1, 'position'=>8, 'notnull'=>0, 'visible'=>-4, 'noteditable'=>1, 'foreignkey'=>'user.rowid',),
+//		'fk_payment'        => array('type'=>'integer',      'label'=>'BankPayment',     'enabled'=>1, 'position'=>8, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'paiement.rowid',),
 	);
 	public $rowid;
 	public $date;
@@ -127,6 +129,17 @@ class BankStatementLine extends CommonObject
 	{
 		parent::setVarsFromFetchObj($obj);
 		$this->calculateDebitCredit();
+	}
+
+	public function setStatus(User $user, $status, $notrigger = false, $triggercode = '')
+	{
+		// status must be in the list of available status
+		if (!in_array($status, array_keys($this->fields['status']['arrayofkeyval']))) {
+			return -1;
+		}
+		// TODO: setStatus on BankStatementLine should call BankStatement::computeStatus() so that
+		//       it is set to reconciled if all child lines are and to unreconciled if any is not.
+		parent::setStatusCommon($user, $status, $notrigger, $triggercode);
 	}
 
 	/**
@@ -205,6 +218,27 @@ class BankStatementLine extends CommonObject
 			}
 		}
 		return $this->statement;
+	}
+
+	/**
+	 * @return Account|null  the bank account linked with the BankStatement the current line belongs to.
+	 */
+	public function getAccount()
+	{
+		$account = new Account($this->db);
+		if ($this->id <= 0 || $this->fk_bankstatement <= 0) return null;
+
+		if (empty($this->statement)) {
+			$sql = 'SELECT fk_account FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement bs WHERE rowid = ' . intval($this->fk_bankstatement);
+			$resql = $this->db->query($sql);
+			if (!$resql) return null;
+			$accountId = $this->db->fetch_object($resql)->fk_account;
+		} else {
+			$accountId = $this->statement->fk_account;
+		}
+		if ($accountId <= 0) return null;
+		if ($account->fetch($accountId) <= 0) return null;
+		return $account;
 	}
 
 	/**
@@ -397,33 +431,51 @@ class BankStatementLine extends CommonObject
 		$filterInput = '<input type="text" name="%s" value="%s" />';
 		switch ($fieldKey) {
 			case 'date':
-				$monthFilterName = $filterName . '_month';
-				$yearFilterName = $filterName . '_year';
-				$yearFilterValue = intval(GETPOST($yearFilterName, 'int'));
-				if (!$yearFilterValue) $yearFilterValue = date('Y');
-				$monthFilterValue = intval(GETPOST($monthFilterName, 'int'));
-				if (!$monthFilterValue) $monthFilterValue = date('m');
-				$monthSelect = sprintf(
-					'<input class="monthinput" type="number" name="%s" value="%d" min="1" max="12" />',
-					$monthFilterName,
-					$monthFilterValue);
-				$yearSelect = sprintf(
-					'<input class="yearinput" type="number" name="%s" value="%d" min="%d" max="%d"/>',
-					$yearFilterName,
-					$yearFilterValue, date('Y') - 50, date('Y') + 50);
-				$filterInput = $monthSelect . $yearSelect;
-			default:
-				$filterInput = parent::showInputField(
-					$fieldParams,
-					$fieldKey,
-					$value,
-					$additionalAttributes,
-					$nameSuffix,
-					$namePrefix,
-					$morecss,
-					$nonewbutton
-				);
+//				$monthFilterName = $filterName . '_month';
+//				$yearFilterName = $filterName . '_year';
+//				$yearFilterValue = intval(GETPOST($yearFilterName, 'int'));
+//				if (!$yearFilterValue) $yearFilterValue = date('Y');
+//				$monthFilterValue = intval(GETPOST($monthFilterName, 'int'));
+//				if (!$monthFilterValue) $monthFilterValue = date('m');
+//				$monthSelect = sprintf(
+//					'<input class="monthinput" type="number" name="%s" value="%d" min="1" max="12" />',
+//					$monthFilterName,
+//					$monthFilterValue);
+//				$yearSelect = sprintf(
+//					'<input class="yearinput" type="number" name="%s" value="%d" min="%d" max="%d"/>',
+//					$yearFilterName,
+//					$yearFilterValue, date('Y') - 50, date('Y') + 50);
+//				$filterInput = $monthSelect . $yearSelect;
+				$form = new Form($this->db);
+				return '<div>'
+					   . '<div>' . $form->selectDate('', $namePrefix . '_start', 0, 0, 1, 0, 1, 0, false, true, false) . '</div>'
+					   . '<div>' . $form->selectDate('', $namePrefix . '_end',   0, 0, 1, 0, 1, 0, false, true, false) . '</div>'
+					   . '</div>';
+				break;
+			case 'label':
+				// override
+				$morecss = $morecss ? ($morecss . ' maxwidth75') : 'maxwidth75';
+				break;
 		}
+
+		$filterInput = parent::showInputField(
+			$fieldParams,
+			$fieldKey,
+			$value,
+			$additionalAttributes,
+			$nameSuffix,
+			$namePrefix,
+			$morecss,
+			$nonewbutton
+		);
+
 		return $filterInput;
+	}
+
+	public function showOutputAccount($val, $key, $value, $moreparam = '', $keysuffix = '', $keyprefix = '', $morecss = '')
+	{
+		$account = $this->getAccount();
+		if ($account === null) return '';
+		return $account->getNomUrl();
 	}
 }

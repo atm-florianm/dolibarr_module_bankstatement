@@ -39,8 +39,8 @@ require_once DOL_DOCUMENT_ROOT . '/core/class/html.form.class.php';
 
 global $langs, $user, $conf, $db;
 
-$TLineId = array_map('intval', GETPOST('toselect', 'array'));
-$accountId = GETPOST('accountId', 'int');
+$TLineId = array_map('intval', GETPOST('TLineId', 'array'));
+$accountId = GETPOST('accountid', 'int');
 $actionApplyConciliation = !empty(GETPOST('applyConciliation'));
 
 $sqlCheckIdsHaveSameAccount='SELECT COUNT(DISTINCT fk_account) FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatementdet line'
@@ -58,12 +58,9 @@ $transactionCompare->load_transactions($TLineId);
 if ($actionApplyConciliation) {
 	$tpl = 'tpl/bankstatement.end.tpl.php';
 	$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
-//	$transactionCompare->load_imported_transactions($TLineId);
-//	$transactionCompare->load_bank_transactions()
 	$transactionCompare->applyConciliation(GETPOST('TLine'));
 } else {
 	$tpl = 'tpl/bankstatement.check.tpl.php';
-//	$transactionCompare->load_transactions($TLineId);
 	$transactionCompare->compare_transactions();
 	$TTransactions = $transactionCompare->TImportedLines;
 }

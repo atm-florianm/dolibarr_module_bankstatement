@@ -210,6 +210,56 @@ if (empty($reshook))
 	// Mass actions
 	$uploaddir = $conf->bankstatement->dir_output;
 	include DOL_DOCUMENT_ROOT.'/core/actions_massactions.inc.php';
+
+	// Reconciliation / comparison
+	if ($massaction === 'reconcile') {
+		require_once DOL_DOCUMENT_ROOT . '/compta/paiement/cheque/class/remisecheque.class.php';
+		require_once DOL_DOCUMENT_ROOT . '/user/class/user.class.php';
+		require_once DOL_DOCUMENT_ROOT . '/adherents/class/adherent.class.php';
+		require_once DOL_DOCUMENT_ROOT . '/compta/sociales/class/chargesociales.class.php';
+		dol_include_once('/bankstatement/class/transactioncompare.class.php');
+
+		$TLineId = array_map('intval', GETPOST('toselect', 'array'));
+		$actionApplyConciliation = !empty(GETPOST('applyConciliation'));
+
+		$sqlCheckIdsHaveSameAccount='SELECT COUNT(DISTINCT fk_account) as nb_accounts, fk_account FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatementdet line'
+									. ' INNER JOIN ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement statement ON line.fk_bankstatement = statement.rowid'
+									. ' WHERE line.rowid IN (' . join(',', $TLineId) . ')';
+		$resql = $db->query($sqlCheckIdsHaveSameAccount);
+		$obj = $db->fetch_object($resql);
+		$nbAccounts = intval($obj->nb_accounts);
+		$accountId = intval($obj->fk_account);
+		if ($nbAccounts !== 1) {
+			// TODO: handle error
+			var_dump($langs->trans('ErrorMoreThanOneAccountSelected'));
+			exit;
+		}
+
+		$transactionCompare = new TransactionCompare($db);
+		$form = new Form($db);
+		$transactionCompare->fetchAccount($accountId);
+		$transactionCompare->load_transactions($TLineId);
+
+		if ($actionApplyConciliation) {
+			$tpl = 'tpl/bankstatement.end.tpl.php';
+			$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
+			//	$transactionCompare->load_imported_transactions($TLineId);
+			//	$transactionCompare->load_bank_transactions()
+			$transactionCompare->applyConciliation(GETPOST('TLine'));
+		} else {
+			$tpl = 'tpl/bankstatement.check.tpl.php';
+			//	$transactionCompare->load_transactions($TLineId);
+			$transactionCompare->compare_transactions();
+			$TTransactions = $transactionCompare->TImportedLines;
+		}
+
+		llxHeader('', $langs->trans('BankStatementCompareTitle'));
+		print_fiche_titre($langs->trans("BankStatementCompareTitle"));
+
+		include 'tpl/bankstatement.common.tpl.php';
+		include $tpl;
+		exit;
+	}
 }
 
 
@@ -355,7 +405,9 @@ if ($optioncss != '')     $param .= '&optioncss='.urlencode($optioncss);
 include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_param.tpl.php';
 
 // List of mass actions available
-$arrayofmassactions = array();
+$arrayofmassactions = array(
+	'reconcile' => $langs->trans('Reconcile')
+);
 if ($permissiontodelete) $arrayofmassactions['predelete'] = '<span class="fa fa-trash paddingrightonly"></span>'.$langs->trans("Delete");
 if (GETPOST('nomassaction', 'int') || in_array($massaction, array('presend', 'predelete'))) $arrayofmassactions = array();
 $massactionbutton = $form->selectMassAction('', $arrayofmassactions);
@@ -415,6 +467,10 @@ print '<table class="tagtable liste'.($moreforfilter ? " listwithfilterbefore" :
 // Fields title search
 // --------------------------------------------------------------------
 print '<tr class="liste_titre">';
+print '<td>';
+$form->select_comptes($search['account']);
+print '</td>';
+
 foreach ($object->fields as $key => $val)
 {
 	$cssforfield = (empty($val['css']) ? '' : $val['css']);
@@ -426,7 +482,8 @@ foreach ($object->fields as $key => $val)
 	{
 		print '<td class="liste_titre'.($cssforfield ? ' '.$cssforfield : '').'">';
 		if (is_array($val['arrayofkeyval'])) print $form->selectarray('search_'.$key, $val['arrayofkeyval'], $search[$key], $val['notnull'], 0, 0, '', 1, 0, 0, '', 'maxwidth75');
-		else print '<input type="text" class="flat maxwidth75" name="search_'.$key.'" value="'.dol_escape_htmltag($search[$key]).'">';
+		else print $object->showInputField($val, $key, dol_escape_htmltag($search[$key]));
+//		else print '<input type="text" class="flat maxwidth75" name="search_'.$key.'" value="'.dol_escape_htmltag($search[$key]).'">';
 		print '</td>';
 	}
 }
@@ -448,6 +505,8 @@ print '</tr>'."\n";
 // Fields title label
 // --------------------------------------------------------------------
 print '<tr class="liste_titre">';
+print '<td>' . $langs->trans('Account') . '</td>'; // TODO colonne compte
+
 foreach ($object->fields as $key => $val)
 {
 	$cssforfield = (empty($val['css']) ? '' : $val['css']);
@@ -510,6 +569,7 @@ while ($i < ($limit ? min($num, $limit) : $num))
 
 	// Show here line of result
 	print '<tr class="oddeven">';
+	print '<td>' . $object->getAccount()->getNomUrl() . '</td>'; // TODO colonne compte triable et filtrable
 	foreach ($object->fields as $key => $val)
 	{
 		$cssforfield = (empty($val['css']) ? '' : $val['css']);

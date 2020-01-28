@@ -1,7 +1,12 @@
-<form method="post" name="bankstatement">
+<form method="post" name="bankstatement" action="bankstatement_reconcile.php">
 	<input type="hidden" name="accountid" value="<?php echo $transactionCompare->account->id ?>" />
 	<input type="hidden" name="datestart" value="<?php echo $transactionCompare->dateStart ?>" />
 	<input type="hidden" name="dateend" value="<?php echo $transactionCompare->dateEnd ?>" />
+	<?php
+	foreach ($TLineId as $k => $id) {
+		echo '<input type="hidden" name="TLineId['.$k.']" value="'.$id.'" />';
+	}
+	?>
 	<input type="hidden" name="action" value="apply_reconciliation" />
 	<table id="bankstatement_line_to_import" class="border" width="100%">
 		<tr class="liste_titre">

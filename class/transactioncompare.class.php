@@ -66,6 +66,11 @@ class TransactionCompare
 	 * @param int[] $TLineId  Array of ids of BankStatementLine objects
 	 */
 	function load_transactions($TLineId) {
+		if (empty($TLineId)) {
+			// TODO: handle error
+			global $langs;
+			setEventMessages($langs->trans('ErrorSelectAtLeastOneStatementLine'), array(), 'errors');
+		}
 		$this->load_imported_transactions($TLineId);
 		$this->load_bank_transactions();
 		$this->load_check_receipt();
@@ -615,6 +620,7 @@ class TransactionCompare
 		}
 		$bankLine->num_releve = $bankStatement->label;
 		$bankLine->update_conciliation($user, 0);
+		$importedLine->setReconciled($user);
 
 		// Update value date
 		$dateDiff = ($importedLine->date - strtotime($bankLine->datev)) / 24 / 3600;
