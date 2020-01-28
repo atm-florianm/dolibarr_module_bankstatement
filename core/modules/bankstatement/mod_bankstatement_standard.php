@@ -36,7 +36,7 @@ class mod_bankstatement_standard extends ModeleNumRefBankStatement
      */
 	public $version = 'dolibarr';		// 'development', 'experimental', 'dolibarr'
 
-	public $prefix='BANKSTATEMENT';
+	public $prefix='IBS'; // Imported Bank Statement
 
 	/**
 	 * @var string Error code (or message)
