@@ -226,7 +226,12 @@ class modBankStatement extends DolibarrModules
 			1024,
 			'bank_account',
 			0,
-			0
+			0,
+			'',
+			'',
+			0,
+			'',
+			0 // should not be visible
 		);
 
 		$sql = array();
