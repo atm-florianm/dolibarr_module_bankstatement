@@ -62,6 +62,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/company.lib.php';
 
 // load bankstatement libraries
 require_once __DIR__.'/class/bankstatement.class.php';
+require_once __DIR__.'/class/bankstatementline.class.php';
 
 // for other modules
 //dol_include_once('/othermodule/class/otherobject.class.php');
@@ -92,12 +93,12 @@ $pageprev = $page - 1;
 $pagenext = $page + 1;
 
 // Initialize technical objects
-$object = new BankStatement($db);
+$object = new BankStatementLine($db);
 $extrafields = new ExtraFields($db);
-$title = $langs->trans('ListOf', $langs->transnoentitiesnoconv("BankStatements"));
-$objectclass = 'BankStatement';
-$objectlabel = 'BankStatement';
-if (!$sortfield) $sortfield = 't.date_import';
+$title = $langs->trans('ListOf', $langs->transnoentitiesnoconv("BankStatementLines"));
+$objectclass = 'BankStatementLine';
+$objectlabel = 'BankStatementLine';
+if (!$sortfield) $sortfield = 't.date';
 if (!$sortorder) $sortorder = 'DESC';
 
 $diroutputmassaction = $conf->bankstatement->dir_output.'/temp/massgeneration/'.$user->id;
@@ -169,9 +170,9 @@ if (is_array($extrafields->attributes[$object->table_element]['label']) && count
 $object->fields = dol_sort_array($object->fields, 'position');
 $arrayfields = dol_sort_array($arrayfields, 'position');
 
-$permissiontoread = $user->rights->bankstatement->bankstatement->read;
-$permissiontoadd = $user->rights->bankstatement->bankstatement->write;
-$permissiontodelete = $user->rights->bankstatement->bankstatement->delete;
+$permissiontoread = $user->rights->bankstatement->read;
+$permissiontoadd = $user->rights->bankstatement->write;
+$permissiontodelete = $user->rights->bankstatement->write;
 
 
 /*
@@ -354,9 +355,7 @@ if ($optioncss != '')     $param .= '&optioncss='.urlencode($optioncss);
 include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_param.tpl.php';
 
 // List of mass actions available
-$arrayofmassactions = array(
-	'delete'=>$langs->trans('Delete'),
-);
+$arrayofmassactions = array();
 if ($permissiontodelete) $arrayofmassactions['predelete'] = '<span class="fa fa-trash paddingrightonly"></span>'.$langs->trans("Delete");
 if (GETPOST('nomassaction', 'int') || in_array($massaction, array('presend', 'predelete'))) $arrayofmassactions = array();
 $massactionbutton = $form->selectMassAction('', $arrayofmassactions);

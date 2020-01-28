@@ -27,7 +27,7 @@ dol_include_once('/bankstatement/lib/bankstatement.lib.php');
 /**
  * Class for BankStatementLine.
  */
-class BankStatementLine extends CommonObjectLine
+class BankStatementLine extends CommonObject
 {
 	/** @var DoliDB $db */
 	public $db;
@@ -163,6 +163,16 @@ class BankStatementLine extends CommonObjectLine
 		}
 		if (!$this->status) $this->status = 0;
 		return $this->createCommon($user, $notrigger);
+	}
+
+	/**
+	 * Deletes the object from the database
+	 * @param User $user
+	 * @param bool $notrigger
+	 */
+	public function delete(User $user, $notrigger = false)
+	{
+		return parent::deleteCommon($user, $notrigger, false);
 	}
 
 	/**
@@ -405,7 +415,9 @@ class BankStatementLine extends CommonObjectLine
 			case 'status':
 				return '<span class="badge badge-status' . $value . ' badge-status">' . $langs->trans($val['arrayofkeyval'][$value]) . '</span>';
 			case 'fk_bankstatement':
-				return '';
+				$bankStatement = new BankStatement($this->db);
+				$bankStatement->fetch($this->fk_bankstatement);
+				return $bankStatement->getNomUrl();
 			case 'account':
 				$account = new Account($this->db);
 				$account->fetch($this->fk_account);
