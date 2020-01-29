@@ -569,9 +569,7 @@ while ($i < ($limit ? min($num, $limit) : $num))
 
 	// Show here line of result
 	print '<tr class="oddeven">';
-	print '<td>';
-	print $object->getAccount(true)->getNomUrl(false, '', 'reflabel');
-	print '</td>';
+	print '<td>' . $object->getAccount()->getNomUrl() . '</td>'; // TODO colonne compte triable et filtrable
 	foreach ($object->fields as $key => $val)
 	{
 		$cssforfield = (empty($val['css']) ? '' : $val['css']);

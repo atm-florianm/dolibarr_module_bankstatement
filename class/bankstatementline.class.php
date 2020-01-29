@@ -230,13 +230,12 @@ class BankStatementLine extends CommonObject
 
 	/**
 	 * Sets $this->statement using $this->fk_statement
-	 * @param boolean $force
 	 * @return int  -1 on failure, 1 if the statement was loaded.
 	 */
-	public function fetchStatement($force = false)
+	public function fetchStatement()
 	{
 		$this->statement = $this->getStatement();
-		if ($this->statement === null || $force) {
+		if ($this->statement === null) {
 			$this->_setError($this->langs->trans('ErrorFailedToFetchStatement', $this->fk_bankstatement, $this->id));
 		}
 		return ($this->statement === null) ? -1 : 1;
@@ -244,12 +243,11 @@ class BankStatementLine extends CommonObject
 	/**
 	 * Returns the related bank statement (loads it in $this->statement if necessary)
 	 * Note: not a pure function as it may set $this->statement
-	 * @param boolean $force force reload objects
 	 * @return BankStatement|null  The related bank statement (null if loading failed)
 	 */
-	public function getStatement($force = false)
+	public function getStatement()
 	{
-		if (!$force && !empty($this->statement) && $this->statement->id == $this->fk_bankstatement) {
+		if (!empty($this->statement) && $this->statement->id == $this->fk_bankstatement) {
 			return $this->statement;
 		}
 		$statement = new BankStatement($this->db);
@@ -262,13 +260,12 @@ class BankStatementLine extends CommonObject
 	}
 
 	/**
-	 * @param boolean $force  if true, the bank account will be fetched
 	 * @return Account|null  the bank account linked with the BankStatement the current line belongs to.
 	 */
-	public function getAccount($force = false)
+	public function getAccount()
 	{
-		if (empty($this->statement) || $force) {
-			if ($this->fetchStatement($force) < 0) {
+		if (empty($this->statement)) {
+			if ($this->fetchStatement() < 0) {
 				return null;
 			}
 		}

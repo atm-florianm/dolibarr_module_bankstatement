@@ -857,12 +857,11 @@ class BankStatement extends CommonObject
 	}
 
 	/**
-	 * @param boolean $force
 	 * @return -1 on failure, 1 on success
 	 */
-	public function fetchAccount($force = false)
+	public function fetchAccount()
 	{
-		$this->account = $this->getAccount($force);
+		$this->account = $this->getAccount();
 		if ($this->account === null) {
 			return -1;
 		} else {
@@ -871,12 +870,10 @@ class BankStatement extends CommonObject
 	}
 
 	/**
-	 * @param boolean $force  If true, will force reloading the account
 	 * @return Account|null
 	 */
-	public function getAccount($force = false)
+	public function getAccount()
 	{
-		if (!$force && !empty($this->account)) return $this->account;
 		$account = new Account($this->db);
 		if ($account->fetch($this->fk_account) <= 0) return null;
 		return $account;
