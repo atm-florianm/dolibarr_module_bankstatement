@@ -65,10 +65,12 @@ function bankstatementPrepareHead($object)
 //	$head[$h][2] = 'document';
 //	$h++;
 
-	$head[$h][0] = dol_buildpath("/bankstatement/bankstatement_reconcile.php", 1).'?id='.$object->id;
-	$head[$h][1] = $langs->trans("Reconcile");
-	$head[$h][2] = 'reconcile'; // => <a id="reconcile" […]></a>
-	$h++;
+	if ($object->status !== $object::STATUS_RECONCILED) {
+		$head[$h][0] = dol_buildpath("/bankstatement/bankstatement_reconcile.php", 1).'?id='.$object->id;
+		$head[$h][1] = $langs->trans("Reconcile");
+		$head[$h][2] = 'reconcile'; // => <a id="reconcile" […]></a>
+		$h++;
+	}
 
 	// Show more tabs from modules
 	// Entries must be declared in modules descriptor with line
