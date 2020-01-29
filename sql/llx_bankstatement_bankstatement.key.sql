@@ -20,4 +20,4 @@ ALTER TABLE llx_bankstatement_bankstatement ADD INDEX idx_bankstatement_bankstat
 -- END MODULEBUILDER INDEXES
 
 -- ALTER TABLE llx_bankstatement_bankstatement ADD UNIQUE INDEX uk_bankstatement_bankstatement_fieldxy(fieldx, fieldy);
--- ALTER TABLE llx_bankstatement_bankstatement ADD CONSTRAINT llx_bankstatement_bankstatement_fk_field FOREIGN KEY (fk_field) REFERENCES llx_bankstatement_myotherobject(rowid);
+ALTER TABLE llx_bankstatement_bankstatement ADD CONSTRAINT llx_bankstatement_bankstatement_fk_account FOREIGN KEY (fk_account) REFERENCES llx_bank_account(rowid);

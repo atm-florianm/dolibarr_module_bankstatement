@@ -58,11 +58,12 @@ function bankstatementPrepareHead($object)
 	$upload_dir = $conf->bankstatement->dir_output . "/bankstatement/" . dol_sanitizeFileName($object->ref);
 	$nbFiles = count(dol_dir_list($upload_dir, 'files', 0, '', '(\.meta|_preview.*\.png)$'));
 	$nbLinks=Link::count($db, $object->element, $object->id);
-	$head[$h][0] = dol_buildpath("/bankstatement/bankstatement_document.php", 1).'?id='.$object->id;
-	$head[$h][1] = $langs->trans('Documents');
-	if (($nbFiles+$nbLinks) > 0) $head[$h][1].= '<span class="badge marginleftonlyshort">'.($nbFiles+$nbLinks).'</span>';
-	$head[$h][2] = 'document';
-	$h++;
+
+//	$head[$h][0] = dol_buildpath("/bankstatement/bankstatement_document.php", 1).'?id='.$object->id;
+//	$head[$h][1] = $langs->trans('Documents');
+//	if (($nbFiles+$nbLinks) > 0) $head[$h][1].= '<span class="badge marginleftonlyshort">'.($nbFiles+$nbLinks).'</span>';
+//	$head[$h][2] = 'document';
+//	$h++;
 
 	$head[$h][0] = dol_buildpath("/bankstatement/bankstatement_reconcile.php", 1).'?id='.$object->id;
 	$head[$h][1] = $langs->trans("Reconcile");

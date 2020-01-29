@@ -114,7 +114,6 @@ class BankStatement extends CommonObject
 	public $fk_account;
 	public $fk_user_import;
 	public $date_import;
-	public $fk_user_reconcile;
 	public $date_reconcile;
 	public $date_start;
 	public $date_end;
@@ -158,6 +157,9 @@ class BankStatement extends CommonObject
 	/** @var BankStatementFormat $CSVFormat */
 	public $CSVFormat;
 
+	/** @var Account $account */
+	public $account;
+
 
 	/**
 	 * Constructor
@@ -169,6 +171,8 @@ class BankStatement extends CommonObject
 		global $conf, $langs;
 
 		$this->db = $db;
+
+		$this->status = self::STATUS_UNRECONCILED;
 
 		$this->CSVFormat = new BankStatementFormat(
 			$conf->global->BANKSTATEMENT_MAPPING,
@@ -264,6 +268,7 @@ class BankStatement extends CommonObject
 
 		$this->db->begin();
 		if ($this->create($user) < 0) {
+			$this->_setError($langs->trans('SQLError', $this->db->lasterror()));
 			$this->db->rollback();
 			return false;
 		}
@@ -289,20 +294,20 @@ class BankStatement extends CommonObject
 			$dataRow = $this->CSVFormat->getStandardDataRow($dataRow);
 
 			if ($dataRow['error']) {
-				setEventMessages(
+				$this->_setError(
 					$langs->transnoentities(
 						'ErrorCSVLineFormatMismatch',
-						($i + $this->CSVFormat->skipFirstLine),
+						($i + intval($this->CSVFormat->skipFirstLine)),
 						dol_htmlentities($csvLine) . '<br>' . $langs->trans($dataRow['error'])
-					),
-					array(),
-					'errors');
+					)
+				);
 			}
 
 			$line->setValuesFromStandardizedCSVRow($dataRow);
 
 			if ($line->create($user) < 0) {
-				setEventMessages($langs->trans('ErrorUnableToCreateBankStatementLine'), array(), 'errors');
+				$this->_setError($langs->trans('ErrorUnableToCreateBankStatementLine'));
+				$this->_setError($this->db->lasterror());
 				continue;
 			}
 
@@ -324,6 +329,7 @@ class BankStatement extends CommonObject
 			$this->db->commit();
 		} else {
 			$this->db->rollback();
+			$this->_setError($langs->trans('CSVImportError', $this->getAccount()->getNomUrl()));
 			return false;
 		}
 
@@ -366,7 +372,7 @@ class BankStatement extends CommonObject
 		// Clear fields
 		$object->ref = empty($this->fields['ref']['default']) ? "copy_of_".$object->ref : $this->fields['ref']['default'];
 		$object->label = empty($this->fields['label']['default']) ? $langs->trans("CopyOf")." ".$object->label : $this->fields['label']['default'];
-		$object->status = self::STATUS_DRAFT;
+		$object->status = self::STATUS_UNRECONCILED;
 		// ...
 		// Clear extrafields that are unique
 		if (is_array($object->array_options) && count($object->array_options) > 0)
@@ -570,212 +576,6 @@ class BankStatement extends CommonObject
 		}
 
 		return $this->deleteLineCommon($user, $idline, $notrigger);
-	}
-
-
-//	/**
-//	 *	Validate object
-//	 *
-//	 *	@param		User	$user     		User making status change
-//	 *  @param		int		$notrigger		1=Does not execute triggers, 0= execute triggers
-//	 *	@return  	int						<=0 if OK, 0=Nothing done, >0 if KO
-//	 */
-//	public function validate($user, $notrigger = 0)
-//	{
-//		global $conf, $langs;
-//
-//		require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
-//
-//		$error = 0;
-//
-//		// Protection
-//		if ($this->status == self::STATUS_VALIDATED)
-//		{
-//			dol_syslog(get_class($this)."::validate action abandonned: already validated", LOG_WARNING);
-//			return 0;
-//		}
-//
-//		/*if (! ((empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->create))
-//		 || (! empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->bankstatement_advance->validate))))
-//		 {
-//		 $this->error='NotEnoughPermissions';
-//		 dol_syslog(get_class($this)."::valid ".$this->error, LOG_ERR);
-//		 return -1;
-//		 }*/
-//
-//		$now = dol_now();
-//
-//		$this->db->begin();
-//
-//		// Define new ref
-//		if (!$error && (preg_match('/^[\(]?PROV/i', $this->ref) || empty($this->ref))) // empty should not happened, but when it occurs, the test save life
-//		{
-//			$num = $this->getNextNumRef();
-//		}
-//		else
-//		{
-//			$num = $this->ref;
-//		}
-//		$this->newref = $num;
-//
-//		// Validate
-//		$sql = "UPDATE ".MAIN_DB_PREFIX.$this->table_element;
-//		$sql .= " SET ref = '".$this->db->escape($num)."',";
-//		$sql .= " status = ".self::STATUS_VALIDATED.",";
-//		$sql .= " date_validation = '".$this->db->idate($now)."',";
-//		$sql .= " fk_user_valid = ".$user->id;
-//		$sql .= " WHERE rowid = ".$this->id;
-//
-//		dol_syslog(get_class($this)."::validate()", LOG_DEBUG);
-//		$resql = $this->db->query($sql);
-//		if (!$resql)
-//		{
-//			dol_print_error($this->db);
-//			$this->error = $this->db->lasterror();
-//			$error++;
-//		}
-//
-//		if (!$error && !$notrigger)
-//		{
-//			// Call trigger
-//			$result = $this->call_trigger('BANKSTATEMENT_VALIDATE', $user);
-//			if ($result < 0) $error++;
-//			// End call triggers
-//		}
-//
-//		if (!$error)
-//		{
-//			$this->oldref = $this->ref;
-//
-//			// Rename directory if dir was a temporary ref
-//			if (preg_match('/^[\(]?PROV/i', $this->ref))
-//			{
-//				// Now we rename also files into index
-//				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filename = CONCAT('".$this->db->escape($this->newref)."', SUBSTR(filename, ".(strlen($this->ref) + 1).")), filepath = 'bankstatement/".$this->db->escape($this->newref)."'";
-//				$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%' AND filepath = 'bankstatement/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
-//				$resql = $this->db->query($sql);
-//				if (!$resql) { $error++; $this->error = $this->db->lasterror(); }
-//
-//				// We rename directory ($this->ref = old ref, $num = new ref) in order not to lose the attachments
-//				$oldref = dol_sanitizeFileName($this->ref);
-//				$newref = dol_sanitizeFileName($num);
-//				$dirsource = $conf->bankstatement->dir_output.'/bankstatement/'.$oldref;
-//				$dirdest = $conf->bankstatement->dir_output.'/bankstatement/'.$newref;
-//				if (!$error && file_exists($dirsource))
-//				{
-//					dol_syslog(get_class($this)."::validate() rename dir ".$dirsource." into ".$dirdest);
-//
-//					if (@rename($dirsource, $dirdest))
-//					{
-//						dol_syslog("Rename ok");
-//						// Rename docs starting with $oldref with $newref
-//						$listoffiles = dol_dir_list($conf->bankstatement->dir_output.'/bankstatement/'.$newref, 'files', 1, '^'.preg_quote($oldref, '/'));
-//						foreach ($listoffiles as $fileentry)
-//						{
-//							$dirsource = $fileentry['name'];
-//							$dirdest = preg_replace('/^'.preg_quote($oldref, '/').'/', $newref, $dirsource);
-//							$dirsource = $fileentry['path'].'/'.$dirsource;
-//							$dirdest = $fileentry['path'].'/'.$dirdest;
-//							@rename($dirsource, $dirdest);
-//						}
-//					}
-//				}
-//			}
-//		}
-//
-//		// Set new ref and current status
-//		if (!$error)
-//		{
-//			$this->ref = $num;
-//			$this->status = self::STATUS_VALIDATED;
-//		}
-//
-//		if (!$error)
-//		{
-//			$this->db->commit();
-//			return 1;
-//		}
-//		else
-//		{
-//			$this->db->rollback();
-//			return -1;
-//		}
-//	}
-
-
-	/**
-	 *	Set draft status
-	 *
-	 *	@param	User	$user			Object user that modify
-	 *  @param	int		$notrigger		1=Does not execute triggers, 0=Execute triggers
-	 *	@return	int						<0 if KO, >0 if OK
-	 */
-	public function setDraft($user, $notrigger = 0)
-	{
-		// Protection
-		if ($this->status <= self::STATUS_DRAFT)
-		{
-			return 0;
-		}
-
-		/*if (! ((empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->write))
-		 || (! empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->bankstatement_advance->validate))))
-		 {
-		 $this->error='Permission denied';
-		 return -1;
-		 }*/
-
-		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'BANKSTATEMENT_UNVALIDATE');
-	}
-
-	/**
-	 *	Set cancel status
-	 *
-	 *	@param	User	$user			Object user that modify
-	 *  @param	int		$notrigger		1=Does not execute triggers, 0=Execute triggers
-	 *	@return	int						<0 if KO, 0=Nothing done, >0 if OK
-	 */
-	public function cancel($user, $notrigger = 0)
-	{
-		// Protection
-		if ($this->status != self::STATUS_VALIDATED)
-		{
-			return 0;
-		}
-
-		/*if (! ((empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->write))
-		 || (! empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->bankstatement_advance->validate))))
-		 {
-		 $this->error='Permission denied';
-		 return -1;
-		 }*/
-
-		return $this->setStatusCommon($user, self::STATUS_CANCELED, $notrigger, 'BANKSTATEMENT_CLOSE');
-	}
-
-	/**
-	 *	Set back to validated status
-	 *
-	 *	@param	User	$user			Object user that modify
-	 *  @param	int		$notrigger		1=Does not execute triggers, 0=Execute triggers
-	 *	@return	int						<0 if KO, 0=Nothing done, >0 if OK
-	 */
-	public function reopen($user, $notrigger = 0)
-	{
-		// Protection
-		if ($this->status != self::STATUS_CANCELED)
-		{
-			return 0;
-		}
-
-		/*if (! ((empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->write))
-		 || (! empty($conf->global->MAIN_USE_ADVANCED_PERMS) && ! empty($user->rights->bankstatement->bankstatement_advance->validate))))
-		 {
-		 $this->error='Permission denied';
-		 return -1;
-		 }*/
-
-		return $this->setStatusCommon($user, self::STATUS_VALIDATED, $notrigger, 'BANKSTATEMENT_REOPEN');
 	}
 
 	/**
@@ -1057,6 +857,29 @@ class BankStatement extends CommonObject
 	}
 
 	/**
+	 * @return -1 on failure, 1 on success
+	 */
+	public function fetchAccount()
+	{
+		$this->account = $this->getAccount();
+		if ($this->account === null) {
+			return -1;
+		} else {
+			return 1;
+		}
+	}
+
+	/**
+	 * @return Account|null
+	 */
+	public function getAccount()
+	{
+		$account = new Account($this->db);
+		if ($account->fetch($this->fk_account) <= 0) return null;
+		return $account;
+	}
+
+	/**
 	 *  Create a document onto disk according to template module.
 	 *
 	 *  @param	    string		$modele			Force template to use ('' to not force)
@@ -1157,6 +980,9 @@ class BankStatement extends CommonObject
 				$account = new Account($this->db);
 				$account->fetch($this->fk_account);
 				return $account->getNomUrl(1, '', 'reflabel');
+			case 'status':
+				global $langs;
+				return '<span class="badge badge-status' . $value . ' badge-status">' . $langs->trans($val['arrayofkeyval'][$value]) . '</span>';
 			default:
 				return parent::showOutputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss);
 		}
@@ -1255,9 +1081,30 @@ class BankStatement extends CommonObject
 			 . '</tr>' . "\n";
 	}
 
+	/**
+	 * Loops over lines: if all are reconciled, set $this->status to reconciled; else set it to unreconciled.
+	 * @param $user
+	 * @return integer  $this->status
+	 */
 	public function computeStatus($user)
 	{
+		foreach ($this->lines as $line) {
+			if ($line->status !== $line::STATUS_RECONCILED && $this->status !== self::STATUS_RECONCILED) {
+				$this->setStatut(self::STATUS_UNRECONCILED);
+				return $this->status;
+			}
+		}
+		$this->setStatut(self::STATUS_RECONCILED);
+		return $this->status;
+	}
 
+	/**
+	 * Appends error message to $this->errors
+	 * @param $message
+	 */
+	private function _setError($message)
+	{
+		$this->errors[] = $this->error = $message;
 	}
 }
 

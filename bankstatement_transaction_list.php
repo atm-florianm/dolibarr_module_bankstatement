@@ -245,7 +245,7 @@ if (empty($reshook))
 			$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
 			//	$transactionCompare->load_imported_transactions($TLineId);
 			//	$transactionCompare->load_bank_transactions()
-			$transactionCompare->applyConciliation(GETPOST('TLine'));
+			$transactionCompare->applyConciliation(GETPOST('TLine', 'array'));
 		} else {
 			$tpl = 'tpl/bankstatement.check.tpl.php';
 			//	$transactionCompare->load_transactions($TLineId);

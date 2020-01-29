@@ -620,7 +620,7 @@ class TransactionCompare
 		}
 		$bankLine->num_releve = $bankStatement->label;
 		$bankLine->update_conciliation($user, 0);
-		$importedLine->setReconciled($user);
+		$importedLine->setStatus($user, $importedLine::STATUS_RECONCILED);
 
 		// Update value date
 		$dateDiff = ($importedLine->date - strtotime($bankLine->datev)) / 24 / 3600;

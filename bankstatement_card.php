@@ -162,8 +162,53 @@ $formfile = new FormFile($db);
 
 llxHeader('', $langs->trans('BankStatement'), '');
 
+function show_form_create($conf, $langs, $hookmanager, $object, $backtopage, $backtopageforcancel) {
+	print load_fiche_titre($langs->trans("NewObject", $langs->transnoentitiesnoconv("BankStatement")));
+	print '<form method="POST" enctype="multipart/form-data" action="'.$_SERVER["PHP_SELF"].'">';
+	print '<input type="hidden" name="token" value="'.newToken().'">';
+	print '<input type="hidden" name="action" value="add">';
+	if ($backtopage) print '<input type="hidden" name="backtopage" value="'.$backtopage.'">';
+	if ($backtopageforcancel) print '<input type="hidden" name="backtopageforcancel" value="'.$backtopageforcancel.'">';
+
+	dol_fiche_head(array(), '');
+
+	print '<table class="border centpercent tableforfieldcreate">'."\n";
+
+	// Common attributes
+	include DOL_DOCUMENT_ROOT.'/core/tpl/commonfields_add.tpl.php';
+
+	// Other attributes
+	include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_add.tpl.php';
+
+	?>
+	<tbody>
+	<tr>
+		<td><label for="CSVFile"><?php echo $langs->trans('FileToImport'); ?></label></td>
+		<td><input id="CSVFile" name="CSVFile" type="file" required /></td>
+	</tr>
+	</tbody>
+	<?php
+	print '</table>'."\n";
+
+	dol_fiche_end();
+
+	print '</div>';
+	print '<div class="center">'
+		  . '<input type="submit" class="button" name="save" value="'.$langs->trans("Save").'" />'
+		  . '&nbsp;'
+		  // Cancel for create does not post form if we don't know the backtopage
+		  . '<input type="'.($backtopage ? "submit" : "button").'" formnovalidate class="button" name="cancel" value="'.dol_escape_htmltag($langs->trans("Cancel")).'"'.($backtopage ? '' : ' onclick="javascript:history.go(-1)"').'>'
+		  . '</div>';
+
+	print '</form>';
+
+	dol_set_focus('input[name="label"]');
+}
+
 // action 'create' = display the creation form
 if ($action === 'create') {
+	show_form_create($conf, $langs, $hookmanager, $object, $backtopage, $backtopageforcancel);
+	exit;
 	print load_fiche_titre($langs->trans("NewObject", $langs->transnoentitiesnoconv("BankStatement")));
 	print '<form method="POST" enctype="multipart/form-data" action="'.$_SERVER["PHP_SELF"].'">';
 	print '<input type="hidden" name="token" value="'.newToken().'">';
@@ -211,12 +256,17 @@ elseif ($action === 'add') {
 		$filePath = $_FILES['CSVFile']['tmp_name'];
 		$object->label = GETPOST('label', 'alpha');
 		if (!$object->createFromCSVFile($filePath, GETPOST('fk_account', 'int'))) {
-			setEventMessages($langs->trans('UnableToCreateFromCSVFile'), array(), 'errors');
+			setEventMessages($object->error, $object->errors, 'errors');
+			// TODO: show the error messages now, not on next page.
+			show_form_create($conf, $langs, $hookmanager, $object, $backtopage, $backtopageforcancel);
+			exit;
+		} else {
+
 		}
 	}
 }
 elseif ($action === 'reconcile') {
-	// TODO : rediriger vers bankstatement_reconcile.php
+	// TODO : rediriger vers bankstatement_reconcile.php avec un POST contenant l’array d’ID et le fk_account
 }
 
 // Part to edit record
@@ -381,13 +431,11 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 
 
 	// Buttons for actions
-
 	if ($action != 'presend' && $action != 'editline') {
 		print '<div class="tabsAction">'."\n";
 		$parameters = array();
 		$reshook = $hookmanager->executeHooks('addMoreActionsButtons', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
 		if ($reshook < 0) setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
-
 		if (empty($reshook))
 		{
 			if ($object->status === $object::STATUS_UNRECONCILED) {

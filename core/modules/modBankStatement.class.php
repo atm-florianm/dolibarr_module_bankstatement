@@ -52,7 +52,7 @@ class modBankStatement extends DolibarrModules
 
 		// Family can be 'base' (core modules),'crm','financial','hr','projects','products','ecm','technic' (transverse modules),'interface' (link with external tools),'other','...'
 		// It is used to group modules by family in module setup page
-		$this->family = "other";
+		$this->family = 'financial';
 		// Module position in the family on 2 digits ('01', '10', '20', ...)
 		$this->module_position = '90';
 		// Gives the possibility for the module, to provide his own family info and position of this family (Overwrite $this->family and $this->module_position. Avoid this)
@@ -124,6 +124,17 @@ class modBankStatement extends DolibarrModules
 		}
 
 		// Array to add new pages in new tabs
+
+		// TODO: one tab to configure an account-specific CSV Import format
+		// TODO: one tab to view imported bank statements for this account
+		// TODO: put the comparison and import pages there too? it would ease the import as the account would be
+		//       selected already.
+		$this->tabs = array('bank'
+							. ':+csvimportconf'
+							. ':CsvImportConf'
+							. ':bankstatement@bankstatement'
+							. ':$user->rights->bankstatement->write'
+							. ':/bankstatement/admin/account-CSV-setup.php?accountid=__ID__');
 
 		// Dictionaries
 		$this->dictionaries=array();

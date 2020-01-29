@@ -55,7 +55,7 @@ class BankStatementLine extends CommonObject
 		'amount'            => array('type'=>'double(24,8)', 'label'=>'Amount',          'enabled'=>1, 'position'=>4, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1,),
 		'status'            => array('type'=>'integer',      'label'=>'Status',          'enabled'=>1, 'position'=>6, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1, 'arrayofkeyval'=>array(0=>'Unreconciled', 1=>'Reconciled'),),
 		'fk_bankstatement'  => array('type'=>'integer',      'label'=>'BankStatement',   'enabled'=>1, 'position'=>7, 'notnull'=>1, 'visible'=> 1, 'noteditable'=>1, 'foreignkey'=>'bankstatement_bankstatement.rowid',),
-//		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',   'enabled'=>1, 'position'=>8, 'notnull'=>0, 'visible'=>-4, 'noteditable'=>1, 'foreignkey'=>'user.rowid',),
+		'fk_user_reconcile' => array('type'=>'integer',      'label'=>'UserReconcile',   'enabled'=>1, 'position'=>8, 'notnull'=>0, 'visible'=>-4, 'noteditable'=>1, 'foreignkey'=>'user.rowid',),
 //		'fk_payment'        => array('type'=>'integer',      'label'=>'BankPayment',     'enabled'=>1, 'position'=>8, 'notnull'=>1, 'visible'=> 1, 'foreignkey'=>'paiement.rowid',),
 	);
 	public $rowid;
@@ -65,6 +65,7 @@ class BankStatementLine extends CommonObject
 	public $direction;
 	public $status;
 	public $fk_bankstatement;
+	public $fk_user_reconcile;
 	// END MODULEBUILDER PROPERTIES
 
 	/** @var BankStatement $statement */
@@ -82,15 +83,17 @@ class BankStatementLine extends CommonObject
 	/** @var float $debit */
 	public $debit;
 
-	/** @var string $error */
-	public $error;
-
 	/** @var BankStatementFormat $CSVFormat */
 	public $CSVFormat;
 
+	/** @var Translate $langs */
+	public $langs;
+
 	public function __construct(DoliDB $db)
 	{
+		global $langs;
 		$this->db = $db;
+		$this->langs = $langs;
 	}
 
 	/**
@@ -116,7 +119,7 @@ class BankStatementLine extends CommonObject
 		$this->label     = $dataRow['label'];
 		$this->amount    = $dataRow['amount'];
 		if ($dataRow['direction'] === self::DIRECTION_DEBIT) $this->amount = -$this->amount;
-		$this->error     = $dataRow['error'];
+		$this->_setError($dataRow['error']);
 		$this->calculateDebitCredit();
 	}
 
@@ -131,15 +134,39 @@ class BankStatementLine extends CommonObject
 		$this->calculateDebitCredit();
 	}
 
+	/**
+	 * @param User   $user
+	 * @param int    $status
+	 * @param bool   $notrigger
+	 * @param string $triggercode
+	 * @return int
+	 */
 	public function setStatus(User $user, $status, $notrigger = false, $triggercode = '')
 	{
 		// status must be in the list of available status
 		if (!in_array($status, array_keys($this->fields['status']['arrayofkeyval']))) {
 			return -1;
 		}
-		// TODO: setStatus on BankStatementLine should call BankStatement::computeStatus() so that
-		//       it is set to reconciled if all child lines are and to unreconciled if any is not.
-		parent::setStatusCommon($user, $status, $notrigger, $triggercode);
+		// we could also use $this->setStatut or $this->setStatusCommon, but the method signature is different.
+		$this->fk_user_reconcile = $user->id;
+		$this->status = $status;
+		$result = $this->updateCommon($user, $notrigger);
+		$this->fetchStatement();
+		if ($this->statement) {
+			$this->statement->computeStatus($user);
+		}
+		return $result;
+	}
+
+	/**
+	 * @param User $user
+	 * @param $notrigger
+	 * @param $triggercode
+	 * @return int
+	 */
+	public function setReconciled(User $user, $notrigger, $triggercode)
+	{
+		return $this->setStatus($user, self::STATUS_RECONCILED, $notrigger, $triggercode);
 	}
 
 	/**
@@ -174,7 +201,7 @@ class BankStatementLine extends CommonObject
 			// do not allow inserting a line with no direction
 			return -1;
 		}
-		if (!$this->status) $this->status = 0;
+		if (!$this->status) $this->status = self::STATUS_UNRECONCILED;
 		return $this->createCommon($user, $notrigger);
 	}
 
@@ -202,22 +229,34 @@ class BankStatementLine extends CommonObject
 	}
 
 	/**
+	 * Sets $this->statement using $this->fk_statement
+	 * @return int  -1 on failure, 1 if the statement was loaded.
+	 */
+	public function fetchStatement()
+	{
+		$this->statement = $this->getStatement();
+		if ($this->statement === null) {
+			$this->_setError($this->langs->trans('ErrorFailedToFetchStatement', $this->fk_bankstatement, $this->id));
+		}
+		return ($this->statement === null) ? -1 : 1;
+	}
+	/**
 	 * Returns the related bank statement (loads it in $this->statement if necessary)
 	 * Note: not a pure function as it may set $this->statement
 	 * @return BankStatement|null  The related bank statement (null if loading failed)
 	 */
 	public function getStatement()
 	{
-		if (empty($this->statement)) {
-			$statement = new BankStatement($this->db);
-			if ($statement->fetch($this->fk_bankstatement) <= 0) {
-				// failure
-				return null;
-			} else {
-				$this->statement = $statement;
-			}
+		if (!empty($this->statement) && $this->statement->id == $this->fk_bankstatement) {
+			return $this->statement;
 		}
-		return $this->statement;
+		$statement = new BankStatement($this->db);
+		if ($statement->fetch($this->fk_bankstatement) <= 0) {
+			// failure
+			return null;
+		} else {
+			return $statement;
+		}
 	}
 
 	/**
@@ -225,20 +264,26 @@ class BankStatementLine extends CommonObject
 	 */
 	public function getAccount()
 	{
-		$account = new Account($this->db);
-		if ($this->id <= 0 || $this->fk_bankstatement <= 0) return null;
-
 		if (empty($this->statement)) {
-			$sql = 'SELECT fk_account FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement bs WHERE rowid = ' . intval($this->fk_bankstatement);
-			$resql = $this->db->query($sql);
-			if (!$resql) return null;
-			$accountId = $this->db->fetch_object($resql)->fk_account;
-		} else {
-			$accountId = $this->statement->fk_account;
+			if ($this->fetchStatement() < 0) {
+				return null;
+			}
 		}
-		if ($accountId <= 0) return null;
-		if ($account->fetch($accountId) <= 0) return null;
-		return $account;
+		if ($this->statement->fetchAccount() < 0) {
+			return null;
+		}
+		return $this->statement->account;
+//		$account = new Account($this->db);
+//		if ($this->id <= 0 || $this->fk_bankstatement <= 0) return null;
+//
+//		$sql = 'SELECT fk_account FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement bs WHERE rowid = ' . intval($this->fk_bankstatement);
+//		$resql = $this->db->query($sql);
+//		if (!$resql) return null;
+//		$accountId = $this->db->fetch_object($resql)->fk_account;
+//
+//		if ($accountId <= 0) return null;
+//		if ($account->fetch($accountId) <= 0) return null;
+//		return $account;
 	}
 
 	/**
@@ -338,9 +383,8 @@ class BankStatementLine extends CommonObject
 
 			return $records;
 		} else {
-			$this->errors[] = 'Error '.$this->db->lasterror();
+			$this->_setError($this->db->lasterror);
 			dol_syslog(__METHOD__.' '.join(',', $this->errors), LOG_ERR);
-
 			return -1;
 		}
 	}
@@ -477,5 +521,14 @@ class BankStatementLine extends CommonObject
 		$account = $this->getAccount();
 		if ($account === null) return '';
 		return $account->getNomUrl();
+	}
+
+	/**
+	 * Appends error message to $this->errors
+	 * @param $message
+	 */
+	private function _setError($message)
+	{
+		$this->errors[] = $this->error = $message;
 	}
 }

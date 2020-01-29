@@ -88,6 +88,9 @@ Colon=Deux-points (:)
 Pipe=Barre verticale (|)
 SaveAll=Sauvegarder tout
 
+# Account-specific setup
+CSVImportConf=Configurer import CSV
+
 
 # Setup errors
 ErrorInputDoesNotMatchPattern=Non sauvegardé : votre saisie ne correspond pas au format attendu.
@@ -97,6 +100,12 @@ ErrorFieldRequired=Ce champ est obligatoire.
 ErrorCSVLineFormatMismatch=Erreur : la ligne %d du CSV n’est pas conforme au format attendu <br/> %s
 ErrorUnableToCreateBankStatementLine=Erreur SQL lors de la création d’une ligne de relevé
 ErrorCSVColumnCountMismatch=Erreur : import configuré pour CSV à %d colonnes ; %d colonnes trouvées
+CSVImportError = Erreur d’analyse du CSV. Vérifiez les paramètres d’import CSV du compte %s puis recommencez.
+SQLError = Erreur SQL : %s
+
+# Object (statement and statement line) errors
+ErrorFailedToFetchStatement = Erreur : échec du chargement du relevé %d associé à la ligne %d.
+
 
 # BankStatement Object
 BankStatement=Relevé de banque

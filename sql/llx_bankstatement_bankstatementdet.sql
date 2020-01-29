@@ -16,13 +16,14 @@
 
 CREATE TABLE llx_bankstatement_bankstatementdet(
 	-- BEGIN MODULEBUILDER FIELDS
-	rowid            integer AUTO_INCREMENT PRIMARY KEY NOT NULL,
-	date             datetime NOT NULL,     -- date of bank transaction
-	label            varchar(128),          -- label
-	amount           double(24,8) NOT NULL, -- amount of transaction (either >0 or <0);
-	                                        -- 0 should not occur (will be handled in later versions)
-	                                        -- (in previous drafts we had a 'direction' column for the sign)
-	status           tinyint NOT NULL,      -- 0: UNRECONCILED;  1: RECONCILED
-	fk_bankstatement integer NOT NULL       -- rowid of llx_bankstatement_bankstatement
+	rowid             integer AUTO_INCREMENT PRIMARY KEY NOT NULL,
+	date              datetime NOT NULL,     -- date of bank transaction
+	label             varchar(128),          -- label
+	amount            double(24,8) NOT NULL, -- amount of transaction (either >0 or <0);
+	                                         -- 0 should not occur (will be handled in later versions)
+	                                         -- (in previous drafts we had a 'direction' column for the sign)
+	status            tinyint NOT NULL,      -- 0: UNRECONCILED;  1: RECONCILED
+	fk_bankstatement  integer NOT NULL,      -- rowid of llx_bankstatement_bankstatement
+	fk_user_reconcile integer                -- rowid of llx_user
 	-- END MODULEBUILDER FIELDS
 ) ENGINE=innodb;
