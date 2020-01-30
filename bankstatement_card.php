@@ -257,6 +257,7 @@ elseif ($action === 'add') {
 		$object->label = GETPOST('label', 'alpha');
 		if (!$object->createFromCSVFile($filePath, GETPOST('fk_account', 'int'))) {
 			setEventMessages($object->error, $object->errors, 'errors');
+			var_dump($object->errors);
 			// TODO: show the error messages now, not on next page.
 			show_form_create($conf, $langs, $hookmanager, $object, $backtopage, $backtopageforcancel);
 			exit;

@@ -451,6 +451,13 @@ class BankStatementLine extends CommonObject
 				$account = new Account($this->db);
 				$account->fetch($this->fk_account);
 				return $account->getNomUrl(1, '', 'reflabel');
+			case 'fk_user_reconcile':
+				$userReconcile = new User($this->db);
+				if ($userReconcile->fetch($value) <= 0) {
+					// TODO: error message?
+					return '';
+				}
+				return $userReconcile->getNomUrl(0);
 			default:
 				return parent::showOutputField($val, $key, $value, $moreparam, $keysuffix, $keyprefix, $morecss);
 		}

@@ -127,9 +127,14 @@ if ($user->socid > 0)	// Protection if external user
 // Initialize array of search criterias
 $search_all=trim(GETPOST("search_all", 'alpha'));
 $search=array();
-foreach($object->fields as $key => $val)
+
+$searchKeys = array();
+$searchKeys[] = 'account';
+$searchKeys = array_merge($searchKeys, array_keys($object->fields));
+
+foreach($searchKeys as $key)
 {
-	if (GETPOST('search_'.$key, 'alpha')) $search[$key]=GETPOST('search_'.$key, 'alpha');
+	if (GETPOST('search_'.$key, 'alpha') !== '') $search[$key]=GETPOST('search_'.$key, 'alpha');
 }
 
 // List of fields to search into when doing a "search in all"
@@ -194,7 +199,7 @@ if (empty($reshook))
 	// Purge search criteria
 	if (GETPOST('button_removefilter_x', 'alpha') || GETPOST('button_removefilter.x', 'alpha') || GETPOST('button_removefilter', 'alpha')) // All tests are required to be compatible with all browsers
 	{
-		foreach ($object->fields as $key => $val)
+		foreach ($searchKeys as $key)
 		{
 			$search[$key] = '';
 		}
@@ -278,38 +283,56 @@ $help_url = '';
 
 // Build and execute select
 // --------------------------------------------------------------------
-$sql = 'SELECT ';
+$sqlSelect = 'SELECT';
 foreach ($object->fields as $key => $val)
 {
-	$sql .= 't.'.$key.', ';
+	$sqlSelect .= ' t.'.$key.',';
 }
 // Add fields from extrafields
 if (!empty($extrafields->attributes[$object->table_element]['label'])) {
-	foreach ($extrafields->attributes[$object->table_element]['label'] as $key => $val) $sql .= ($extrafields->attributes[$object->table_element]['type'][$key] != 'separate' ? "ef.".$key.' as options_'.$key.', ' : '');
+	foreach ($extrafields->attributes[$object->table_element]['label'] as $key => $val)
+		$sqlSelect .= ($extrafields->attributes[$object->table_element]['type'][$key] != 'separate' ? " ef.".$key.' as options_'.$key.',' : '');
 }
 // Add fields from hooks
 $parameters = array();
 $reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $object); // Note that $action and $object may have been modified by hook
-$sql .= preg_replace('/^,/', '', $hookmanager->resPrint);
-$sql = preg_replace('/,\s*$/', '', $sql);
-$sql .= " FROM ".MAIN_DB_PREFIX.$object->table_element." as t";
-if (is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label'])) $sql .= " LEFT JOIN ".MAIN_DB_PREFIX.$object->table_element."_extrafields as ef on (t.rowid = ef.fk_object)";
-if ($object->ismultientitymanaged == 1) $sql .= " WHERE t.entity IN (".getEntity($object->element).")";
-else $sql .= " WHERE 1 = 1";
+$sqlSelect .= preg_replace('/^,/', '', $hookmanager->resPrint);
+$sqlSelect = preg_replace('/,\s*$/', '', $sqlSelect);
+$sqlFrom = "FROM ".MAIN_DB_PREFIX.$object->table_element." as t";
+if (is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label']))
+	$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX.$object->table_element."_extrafields as ef on (t.rowid = ef.fk_object)";
+$sqlWhere = 'WHERE';
+if ($object->ismultientitymanaged == 1) $sqlWhere .= " t.entity IN (".getEntity($object->element).")";
+else $sqlWhere .= " 1 = 1";
+
+// load fk_account
+$sqlSelect .= ', bs.fk_account AS fk_account';
+$sqlFrom  .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement' . ' AS bs ON (t.fk_bankstatement = bs.rowid)';
+
+
 foreach ($search as $key => $val)
 {
-	if ($key == 'status' && $search[$key] == -1) continue;
+	switch ($key) {
+		case 'account':
+			if (intval($val) <= 0) continue 2;
+			$sqlWhere .= ' AND (bs.fk_account = ' . intval($val) . ')';
+			continue 2;
+		case 'status':
+			if ($val == -1) continue 2;
+			break;
+	}
 	$mode_search = (($object->isInt($object->fields[$key]) || $object->isFloat($object->fields[$key])) ? 1 : 0);
-	if ($search[$key] != '') $sql .= natural_search($key, $search[$key], (($key == 'status') ? 2 : $mode_search));
+//	var_dump(natural_search('t.' . $key, $search[$key], (($key == 'status') ? 2 : $mode_search)));
+	if ($search[$key] != '') $sqlWhere .= natural_search('t.' . $key, $search[$key], (($key == 'status') ? 2 : $mode_search));
 }
-if ($search_all) $sql .= natural_search(array_keys($fieldstosearchall), $search_all);
-//$sql.= dolSqlDateFilter("t.field", $search_xxxday, $search_xxxmonth, $search_xxxyear);
+if ($search_all) $sqlWhere .= natural_search(array_keys($fieldstosearchall), $search_all);
+//$sqlWhere .= dolSqlDateFilter("t.field", $search_xxxday, $search_xxxmonth, $search_xxxyear);
 // Add where from extra fields
 include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_sql.tpl.php';
 // Add where from hooks
 $parameters = array();
 $reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters, $object); // Note that $action and $object may have been modified by hook
-$sql .= $hookmanager->resPrint;
+$sqlWhere .= $hookmanager->resPrint;
 
 /* If a group by is required
 $sql.= " GROUP BY "
@@ -327,7 +350,9 @@ $sql.=$hookmanager->resPrint;
 $sql=preg_replace('/,\s*$/','', $sql);
 */
 
-$sql .= $db->order($sortfield, $sortorder);
+$sqlOrderBy = $db->order($sortfield, $sortorder);
+
+$sql = $sqlSelect . ' ' . $sqlFrom . ' ' . $sqlWhere . ' ' . $sqlOrderBy;
 
 // Count total nb of records
 $nbtotalofrecords = '';
@@ -376,19 +401,9 @@ if ($num == 1 && !empty($conf->global->MAIN_SEARCH_DIRECT_OPEN_IF_ONLY_ONE) && $
 llxHeader('', $title, $help_url);
 
 // Example : Adding jquery code
-print '<script type="text/javascript" language="javascript">
-jQuery(document).ready(function() {
-	function init_myfunc()
-	{
-		jQuery("#myid").removeAttr(\'disabled\');
-		jQuery("#myid").attr(\'disabled\',\'disabled\');
-	}
-	init_myfunc();
-	jQuery("#mybutton").click(function() {
-		init_myfunc();
-	});
-});
-</script>';
+//print '<script type="text/javascript" language="javascript">
+//jQuery(document).ready(function() {});
+//</script>';
 
 $arrayofselected = is_array($toselect) ? $toselect : array();
 
@@ -468,7 +483,7 @@ print '<table class="tagtable liste'.($moreforfilter ? " listwithfilterbefore" :
 // --------------------------------------------------------------------
 print '<tr class="liste_titre">';
 print '<td>';
-$form->select_comptes($search['account']);
+$form->select_comptes($search['account'], 'search_account', 0, '', 1);
 print '</td>';
 
 foreach ($object->fields as $key => $val)
@@ -482,7 +497,7 @@ foreach ($object->fields as $key => $val)
 	{
 		print '<td class="liste_titre'.($cssforfield ? ' '.$cssforfield : '').'">';
 		if (is_array($val['arrayofkeyval'])) print $form->selectarray('search_'.$key, $val['arrayofkeyval'], $search[$key], $val['notnull'], 0, 0, '', 1, 0, 0, '', 'maxwidth75');
-		else print $object->showInputField($val, $key, dol_escape_htmltag($search[$key]));
+		else print $object->showInputField($val, $key, dol_escape_htmltag($search[$key]), '', '', 'search_');
 //		else print '<input type="text" class="flat maxwidth75" name="search_'.$key.'" value="'.dol_escape_htmltag($search[$key]).'">';
 		print '</td>';
 	}
@@ -553,6 +568,7 @@ if (is_array($extrafields->attributes[$object->table_element]['computed']) && co
 
 // Loop on record
 // --------------------------------------------------------------------
+$account = new Account($db);
 $i = 0;
 $totalarray = array();
 while ($i < ($limit ? min($num, $limit) : $num))
@@ -569,7 +585,10 @@ while ($i < ($limit ? min($num, $limit) : $num))
 
 	// Show here line of result
 	print '<tr class="oddeven">';
-	print '<td>' . $object->getAccount()->getNomUrl() . '</td>'; // TODO colonne compte triable et filtrable
+	print '<td>';
+	$account->fetch($obj->fk_account);
+	print $account->getNomUrl(false, '', 'reflabel');
+	print '</td>';
 	foreach ($object->fields as $key => $val)
 	{
 		$cssforfield = (empty($val['css']) ? '' : $val['css']);
