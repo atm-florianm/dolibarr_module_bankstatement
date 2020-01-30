@@ -124,6 +124,7 @@ if ($user->socid > 0)	// Protection if external user
 }
 //$result = restrictedArea($user, 'bankstatement', $id, '');
 
+
 // Initialize array of search criterias
 $search_all=trim(GETPOST("search_all", 'alpha'));
 $search=array();
@@ -136,6 +137,25 @@ foreach($searchKeys as $key)
 {
 	if (GETPOST('search_'.$key, 'alpha') !== '') $search[$key]=GETPOST('search_'.$key, 'alpha');
 }
+
+// Get start date and end date
+foreach (array('start', 'end') as $dateBoundary) {
+	if (   empty(GETPOST('search_' . $dateBoundary . '_month', 'int'))
+		   || empty(GETPOST('search_' . $dateBoundary . '_day',   'int'))
+		   || empty(GETPOST('search_' . $dateBoundary . '_year',  'int'))) {
+		${'date_' . $dateBoundary} = null;
+		continue;
+	}
+	${'date_' . $dateBoundary} = dol_mktime(
+		0,
+		0,
+		0,
+		GETPOST('search_' . $dateBoundary . '_month', 'int'),
+		GETPOST('search_' . $dateBoundary . '_day',   'int'),
+		GETPOST('search_' . $dateBoundary . '_year',  'int')
+	);
+}
+$search['date'] = array($date_start, $date_end);
 
 // List of fields to search into when doing a "search in all"
 $fieldstosearchall = array();
@@ -309,7 +329,6 @@ else $sqlWhere .= " 1 = 1";
 $sqlSelect .= ', bs.fk_account AS fk_account';
 $sqlFrom  .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement' . ' AS bs ON (t.fk_bankstatement = bs.rowid)';
 
-
 foreach ($search as $key => $val)
 {
 	switch ($key) {
@@ -320,6 +339,21 @@ foreach ($search as $key => $val)
 		case 'status':
 			if ($val == -1) continue 2;
 			break;
+		case 'date':
+			if (empty($val) || !is_array($val) || count($val) !== 2) {
+				// no date filter
+				continue 2;
+			} elseif ($val[0] !== null && $val[1] !== null) {
+				// both dates provided
+				$sqlWhere .= ' AND (t.date BETWEEN "' . $db->idate($val[0]) . '" AND "' . $db->idate($val[1]) . '")';
+			} elseif ($val[0] !== null) {
+				// only start date
+				$sqlWhere .= ' AND (t.date >= "' . $db->idate($val[0]) . '")';
+			} elseif ($val[1] !== null) {
+				// only end date
+				$sqlWhere .= ' AND (t.date <= "' . $db->idate($val[1]) . '")';
+			}
+			continue 2;
 	}
 	$mode_search = (($object->isInt($object->fields[$key]) || $object->isFloat($object->fields[$key])) ? 1 : 0);
 //	var_dump(natural_search('t.' . $key, $search[$key], (($key == 'status') ? 2 : $mode_search)));
@@ -327,6 +361,9 @@ foreach ($search as $key => $val)
 }
 if ($search_all) $sqlWhere .= natural_search(array_keys($fieldstosearchall), $search_all);
 //$sqlWhere .= dolSqlDateFilter("t.field", $search_xxxday, $search_xxxmonth, $search_xxxyear);
+
+
+
 // Add where from extra fields
 include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_sql.tpl.php';
 // Add where from hooks
@@ -353,6 +390,7 @@ $sql=preg_replace('/,\s*$/','', $sql);
 $sqlOrderBy = $db->order($sortfield, $sortorder);
 
 $sql = $sqlSelect . ' ' . $sqlFrom . ' ' . $sqlWhere . ' ' . $sqlOrderBy;
+//printf('<div style="padding: 1em; margin: 1em; border: solid 1px black;">%s</div>', $sql);
 
 // Count total nb of records
 $nbtotalofrecords = '';
@@ -495,9 +533,13 @@ foreach ($object->fields as $key => $val)
 	elseif (in_array($val['type'], array('double(24,8)', 'double(6,3)', 'integer', 'real', 'price')) && $val['label'] != 'TechnicalID') $cssforfield .= ($cssforfield ? ' ' : '').'right';
 	if (!empty($arrayfields['t.'.$key]['checked']))
 	{
+		$inputValue = $search[$key];
+		if ($key !== 'date') {
+			$inputValue = dol_escape_htmltag($inputValue);
+		}
 		print '<td class="liste_titre'.($cssforfield ? ' '.$cssforfield : '').'">';
 		if (is_array($val['arrayofkeyval'])) print $form->selectarray('search_'.$key, $val['arrayofkeyval'], $search[$key], $val['notnull'], 0, 0, '', 1, 0, 0, '', 'maxwidth75');
-		else print $object->showInputField($val, $key, dol_escape_htmltag($search[$key]), '', '', 'search_');
+		else print $object->showInputField($val, $key, $inputValue, '', '', 'search_');
 //		else print '<input type="text" class="flat maxwidth75" name="search_'.$key.'" value="'.dol_escape_htmltag($search[$key]).'">';
 		print '</td>';
 	}
@@ -580,6 +622,7 @@ while ($i < ($limit ? min($num, $limit) : $num))
 	$object->id = $obj->rowid;
 	foreach ($object->fields as $key => $val)
 	{
+//		var_dump($key, $obj->$key);
 		if (property_exists($obj, $key)) $object->$key = $obj->$key;
 	}
 

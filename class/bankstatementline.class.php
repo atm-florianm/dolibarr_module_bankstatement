@@ -453,7 +453,7 @@ class BankStatementLine extends CommonObject
 				return $account->getNomUrl(1, '', 'reflabel');
 			case 'fk_user_reconcile':
 				$userReconcile = new User($this->db);
-				if ($userReconcile->fetch($value) <= 0) {
+				if (empty($value) || $userReconcile->fetch($value) <= 0) {
 					// TODO: error message?
 					return '';
 				}
@@ -482,31 +482,23 @@ class BankStatementLine extends CommonObject
 		$filterInput = '<input type="text" name="%s" value="%s" />';
 		switch ($fieldKey) {
 			case 'date':
-//				$monthFilterName = $filterName . '_month';
-//				$yearFilterName = $filterName . '_year';
-//				$yearFilterValue = intval(GETPOST($yearFilterName, 'int'));
-//				if (!$yearFilterValue) $yearFilterValue = date('Y');
-//				$monthFilterValue = intval(GETPOST($monthFilterName, 'int'));
-//				if (!$monthFilterValue) $monthFilterValue = date('m');
-//				$monthSelect = sprintf(
-//					'<input class="monthinput" type="number" name="%s" value="%d" min="1" max="12" />',
-//					$monthFilterName,
-//					$monthFilterValue);
-//				$yearSelect = sprintf(
-//					'<input class="yearinput" type="number" name="%s" value="%d" min="%d" max="%d"/>',
-//					$yearFilterName,
-//					$yearFilterValue, date('Y') - 50, date('Y') + 50);
-//				$filterInput = $monthSelect . $yearSelect;
+				// for 'date', the value is an array of timestamps
+				if (empty($value)) $value = array(null, null);
+				$value_start = $value[0] ? $value[0] : '';
+				$value_end =   $value[1] ? $value[1] : '';
 				$form = new Form($this->db);
 				return '<div>'
-					   . '<div>' . $form->selectDate('', $namePrefix . '_start', 0, 0, 1, 0, 1, 0, false, true, false) . '</div>'
-					   . '<div>' . $form->selectDate('', $namePrefix . '_end',   0, 0, 1, 0, 1, 0, false, true, false) . '</div>'
+					   . '<div>' . $form->selectDate($value_start, $namePrefix . 'start_', 0, 0, 1, 0, 1, 0, false, true, false) . '</div>'
+					   . '<div>' . $form->selectDate($value_end,   $namePrefix . 'end_',   0, 0, 1, 0, 1, 0, false, true, false) . '</div>'
 					   . '</div>';
 				break;
 			case 'label':
 				// override
 				$morecss = $morecss ? ($morecss . ' maxwidth75') : 'maxwidth75';
 				break;
+			case 'fk_user_reconcile':
+				// TODO (?) filter by user?
+				return '';
 		}
 
 		$filterInput = parent::showInputField(
