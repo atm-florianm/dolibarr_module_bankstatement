@@ -229,6 +229,8 @@ class modBankStatement extends DolibarrModules
 		// Create extrafields
 		include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 		$extrafields=new ExtraFields($this->db);
+		/*
+		 * @see llx_bankstatement_importformat
 		$res = $extrafields->addExtraField(
 			'bank_statement_import_format',
 			'Bank statement import format',
@@ -244,6 +246,7 @@ class modBankStatement extends DolibarrModules
 			'',
 			0 // should not be visible
 		);
+		*/
 
 		$sql = array();
 

@@ -23,6 +23,8 @@
  */
 
 dol_include_once('/bankstatement/lib/bankstatement.lib.php');
+require_once 'bankstatementformat.class.php';
+require_once 'bankstatement.class.php';
 require_once DOL_DOCUMENT_ROOT . '/compta/bank/class/account.class.php';
 
 /**
@@ -82,9 +84,6 @@ class BankStatementLine extends CommonObject
 	public $credit;
 	/** @var float $debit */
 	public $debit;
-
-	/** @var BankStatementFormat $CSVFormat */
-	public $CSVFormat;
 
 	/** @var Translate $langs */
 	public $langs;

@@ -25,6 +25,7 @@
 // Put here all includes required by your class file
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
 require_once DOL_DOCUMENT_ROOT.'/compta/bank/class/account.class.php';
+require_once 'bankstatementformat.class.php';
 require_once 'bankstatementline.class.php';
 dol_include_once('/bankstatement/core/modules/bankstatement/mod_bankstatement_standard.php');
 dol_include_once('/bankstatement/lib/bankstatement.lib.php');
@@ -174,17 +175,8 @@ class BankStatement extends CommonObject
 
 		$this->status = self::STATUS_UNRECONCILED;
 
-		$this->CSVFormat = new BankStatementFormat(
-			$conf->global->BANKSTATEMENT_MAPPING,
-			$conf->global->BANKSTATEMENT_DATE_FORMAT,
-			'"',
-			$conf->global->BANKSTATEMENT_SEPARATOR,
-			null,
-			false,
-			array($conf->global->BANKSTATEMENT_DIRECTION_CREDIT => DIRECTION_CREDIT, $conf->global->BANKSTATEMENT_DIRECTION_DEBIT => DIRECTION_DEBIT),
-			$conf->global->BANKSTATEMENT_USE_DIRECTION,
-			$conf->global->BANKSTATEMENT_HEADER
-		);
+		$this->CSVFormat = new BankStatementFormat($this->db);
+		$this->CSVFormat->load(0);
 
 		if (empty($conf->global->MAIN_SHOW_TECHNICAL_ID) && isset($this->fields['rowid'])) $this->fields['rowid']['visible'] = 0;
 		if (empty($conf->multicompany->enabled) && isset($this->fields['entity'])) $this->fields['entity']['enabled'] = 0;
@@ -264,7 +256,7 @@ class BankStatement extends CommonObject
 
 		$this->fk_account = $fk_account;
 
-		$this->CSVFormat->loadFromAccountExtrafield($this->db, $fk_account);
+		$this->CSVFormat->load($fk_account);
 
 		$this->db->begin();
 		if ($this->create($user) < 0) {
@@ -288,7 +280,6 @@ class BankStatement extends CommonObject
 			}
 
 			$line = new BankStatementLine($this->db);
-			$line->CSVFormat = $this->CSVFormat;
 			$line->fk_bankstatement = $this->id;
 			$dataRow = $this->CSVFormat->parseCSVLine($csvLine);
 			$dataRow = $this->CSVFormat->getStandardDataRow($dataRow);
@@ -1105,248 +1096,5 @@ class BankStatement extends CommonObject
 	private function _setError($message)
 	{
 		$this->errors[] = $this->error = $message;
-	}
-}
-
-/**
- * Simple data class for handling details of a CSV format variant (like the column separator etc.)
- *
- * Its role is only to turn various CSV formats into standardized bank transaction arrays with:
- *  - 'date'      date of transaction
- *  - 'label'     transaction label / reference
- *  - 'amount'    transaction amount (absolute value)
- *  - 'direction' direction of the transaction (-1 for debit, +1 for credit)
- *
- * See the samples/ directory for sample CSV formats that can be parsed.
- * It is not meant to perform any business logic beyond interpreting CSV.
- * TODO: save its values somewhere (within a bank account extrafield?) to
- * provide per-account CSV formats
- */
-class BankStatementFormat
-{
-	public $mapping           = array('date', 'label', 'credit', 'debit');
-	public $dateFormat        = 'Y-m-d';
-	public $enclosure         = '"';
-	public $separator         = ';';
-	public $lineEnding        = "\\r\\n|\\r|\\n"; // NULL means stream_get_line will split at '\n', '\r' and '\r\n'
-	//                                   ()
-	public $fileChunkSize     = 4096; // how many characters will be read at a time.
-	//                                   In previous implementations it was the maximum length of a CSV line but it no
-	//                                   longer is (buffering ensures longer lines can be handled).
-	public $maxLineBufferSize = 16384; // sanity check: if the wrong file is sent (a large binary file for instance),
-	//                                    don't wait until the server is out of memory to raise an error.
-	public $escape            = '\\';
-	public $columnMode        = false;
-	public $directionMapping  = array('credit' => DIRECTION_CREDIT, 'debit' => DIRECTION_DEBIT);
-	public $useDirection      = false;
-	public $skipFirstLine     = true;
-
-	// internal CSV string buffering
-	private $TFullLines = array(); // stores full CSV lines as string until they are read
-	private $lineBuffer = '';      // internal buffer for leftover bytes from the fread() call that might not be a full line
-	public function __construct($mapping, $dateFormat, $enclosure, $separator, $lineEnding, $columnMode, $directionMapping, $useDirection, $skipFirstLine)
-	{
-		$this->mapping    = explode(';', $mapping);
-		$this->dateFormat = $dateFormat;
-		$this->enclosure  = $enclosure;
-		$this->separator  = $separator;
-		$this->lineEnding = $lineEnding;
-		$this->columnMode = $columnMode;
-		$this->directionMapping = $directionMapping;
-		$this->useDirection     = $useDirection;
-		$this->skipFirstLine    = $skipFirstLine;
-	}
-
-	/**
-	 * Returns the next line of text from the open file descriptor $csvFile. It basically works a lot like PHP standard
-	 * stream_get_line() [https://www.php.net/manual/en/function.stream-get-line.php], except that
-	 * stream_get_line($csvFile, $this->max) without the $ending parameter will not work the same: with getNextCSVLine,
-	 * $this->lineEnding can be a regular expression.
-	 *
-	 * @param resource  $csvFile  An open CSV file
-	 * @param boolean   $isFirst  Whether this is the first line read from the CSV
-	 * @return string|null        Null when feof is reached
-	 * @throws ErrorException
-	 */
-	public function getNextCSVLine($csvFile)
-	{
-		$ending = $this->lineEnding ? '#' . $this->lineEnding . '#' :  "#\\r\\n|\\r|\\n#";
-		if (count($this->TFullLines)) {
-			return array_shift($this->TFullLines);
-		} elseif (feof($csvFile)) {
-			return null;
-		} else {
-			while (count($lines = preg_split($ending, $this->lineBuffer)) === 1 && !feof($csvFile)) {
-				$chunk = fread($csvFile, $this->fileChunkSize);
-				if (strlen($this->lineBuffer) + strlen($chunk) > $this->maxLineBufferSize) {
-					throw new ErrorException('CSV line length exceeds maxLineBufferSize');
-				}
-				$this->lineBuffer .= $chunk;
-			}
-			$this->lineBuffer = array_pop($lines);
-			if ($lines) $this->TFullLines += $lines;
-			return array_shift($this->TFullLines);
-		}
-	}
-
-	/**
-	 * @param $csvLine
-	 * @return array
-	 */
-	public function parseCSVLine($csvLine)
-	{
-		return str_getcsv($csvLine, $this->separator, $this->enclosure, $this->escape);
-	}
-
-	/**
-	 *
-	 * @param $dataRow
-	 * @return array
-	 */
-	public function getStandardDataRow($dataRow)
-	{
-		global $langs;
-		$standardRow = array(
-			'date' => null,
-			'label' => null,
-			'amount' => null,
-			'direction' => null,
-			'error' => ''
-		);
-
-		if (count($this->mapping) !== count($dataRow)) {
-			$standardRow['error'] = $langs->trans('ErrorCSVColumnCountMismatch', count($this->mapping), count($dataRow));
-			return $standardRow;
-		}
-		$combinedRow = array_combine($this->mapping, $dataRow);
-		if (!empty($combinedRow['date'])) {
-			$standardRow['date'] = DateTime::createFromFormat(
-				$this->dateFormat,
-				$combinedRow['date']
-			);
-		}
-		// must happen once in a billion, but let’s account for the possibility that the CSV line has the date '1970-01-01'
-		$CSVDateIsEpoch = isset($combinedRow['date']) && $combinedRow['date'] === date($this->dateFormat, 0);
-
-		if (!empty($standardRow['date']) || $CSVDateIsEpoch) {
-			$standardRow['date']->setTime(0, 0, 0);
-			$standardRow['date'] = $standardRow['date']->getTimestamp();
-		} else {
-			$standardRow['error'] = 'ErrorBankStatementLineHasNoDate';
-			return $standardRow;
-		}
-
-		if (isset($combinedRow['label'])) $standardRow['label'] = $combinedRow['label'];
-
-		// Depending on format configuration, use one of several specialized methods to
-		// get 'amount' and 'direction'
-		if (in_array('amount', $this->mapping)) {
-			if ($this->useDirection) {
-				$this->standardizeAmountDirectionDataRow($standardRow, $combinedRow);
-			} else {
-				$this->standardizeSignedAmountDataRow($standardRow, $combinedRow);
-			}
-		} else {
-			$this->standardizeCreditDebitDataRow($standardRow, $combinedRow);
-		}
-
-		return $standardRow;
-	}
-
-	/**
-	 * Set keys 'amount' and 'direction' of a standard row using 'credit' and 'debit' from
-	 * the unprocessed $combinedRow
-	 * @param $standardRow
-	 * @param $combinedRow
-	 */
-	public function standardizeCreditDebitDataRow(&$standardRow, $combinedRow)
-	{
-		$hasCredit = !empty($combinedRow['credit']);
-		$hasDebit  = !empty($combinedRow['debit']);
-
-		if ($hasCredit XOR $hasDebit) {
-			// either debit or credit is set, but not both = OK
-			if ($hasCredit) {
-				$standardRow['direction'] = DIRECTION_CREDIT;
-				$standardRow['amount'] = doubleval(price2num($combinedRow['credit']));
-			} else {
-				$standardRow['direction'] = DIRECTION_DEBIT;
-				$standardRow['amount'] = doubleval(price2num($combinedRow['debit' ]));
-			}
-		} elseif ($hasCredit && $hasDebit) {
-			// both set = error
-			$standardRow['error'] = 'ErrorBankStatementLineHasBothDebitAndCredit';
-		} else {
-			// both unset = error
-			$standardRow['error'] = 'ErrorBankStatementLineHasNeitherDebitAndCredit';
-		}
-	}
-
-	/**
-	 * Set keys 'amount' and 'direction' of a standard row using 'amount' and 'direction' from
-	 * the unprocessed $combinedRow
-	 * @param $standardRow
-	 * @param $combinedRow
-	 */
-	public function standardizeAmountDirectionDataRow(&$standardRow, $combinedRow)
-	{
-		$hasAmount = !empty($combinedRow['amount']);
-		$hasType   = !empty($combinedRow['direction']);
-		if (!$hasAmount || !$hasType) {
-			$standardRow['error'] = 'ErrorBankStatementLineHasNoAmountOrType';
-		}
-		$standardRow['amount'] = doubleval(price2num($combinedRow['amount']));
-		if (array_key_exists($combinedRow['direction'], $this->directionMapping)) {
-			$standardRow['direction'] = $this->directionMapping[$combinedRow['direction']];
-		} else {
-			$standardRow['error'] = 'ErrorInvalidBankStatementDirectionValue';
-		}
-	}
-
-	/**
-	 * Set keys 'amount' and 'direction' of a standard row using a raw (signed) amount.
-	 * @param $standardRow
-	 * @param $combinedRow
-	 */
-	public function standardizeSignedAmountDataRow(&$standardRow, $combinedRow)
-	{
-		$hasAmount = !empty($combinedRow['amount']);
-		if (!$hasAmount) {
-			$standardRow['error'] = 'ErrorBankStatementLineHasNoAmount';
-		}
-		$rawAmount = doubleval(price2num($combinedRow['amount']));
-		if (!$rawAmount) {
-			$standardRow['error'] = 'ErrorBankStatementAmountIsZero';
-		}
-		$standardRow['amount'] = abs($rawAmount);
-		$standardRow['direction'] = getAmountType($rawAmount);
-	}
-
-	/**
-	 * @param DoliDB $db
-	 * @param int    $fk_account
-	 */
-	public function loadFromAccountExtrafield($db, $fk_account)
-	{
-		$account = new Account($db);
-		if ($account->fetch($fk_account) <= 0) {
-			// TODO error handling
-			return -1;
-		}
-		$account->fetch_optionals();
-		$rawJsonConf = $account->array_options['options_bank_statement_import_format'];
-		if (!$rawJsonConf) return;
-		$accountConf = json_decode($rawJsonConf);
-
-		$this->mapping          = explode(';', $accountConf->BANKSTATEMENT_MAPPING) ?: $this->mapping;
-		$this->dateFormat       = $accountConf->BANKSTATEMENT_DATE_FORMAT ?: $this->dateFormat;
-		$this->enclosure        = '"' ?: $this->enclosure;
-		$this->separator        = $accountConf->BANKSTATEMENT_SEPARATOR ?: $this->separator;
-		$this->lineEnding       = null ?: $this->lineEnding;
-		$this->columnMode       = false ?: $this->columnMode;
-		$this->directionMapping = array($accountConf->BANKSTATEMENT_DIRECTION_CREDIT => DIRECTION_CREDIT, $accountConf->BANKSTATEMENT_DIRECTION_DEBIT => DIRECTION_DEBIT) ?: $this->directionMapping;
-		$this->useDirection     = $accountConf->BANKSTATEMENT_USE_DIRECTION ?: $this->useDirection;
-		$this->skipFirstLine    = $accountConf->BANKSTATEMENT_HEADER ?: $this->skipFirstLine;
-		return 1;
 	}
 }

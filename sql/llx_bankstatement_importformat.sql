@@ -1,4 +1,4 @@
--- Copyright (C) 2020  ATM Consulting <support@atm-consulting.fr>
+-- Copyright (C)  2020 ATM Consulting <support@atm-consulting.fr>
 --
 -- This program is free software; you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -13,11 +13,21 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program. If not, see https://www.gnu.org/licenses/.
 
-create table llx_bankstatement_bankstatement_extrafields
-(
-  rowid                     integer AUTO_INCREMENT PRIMARY KEY,
-  tms                       timestamp,
-  fk_object                 integer NOT NULL,
-  import_key                varchar(14)                          		-- import key
+CREATE TABLE llx_bankstatement_importformat(
+    rowid             integer AUTO_INCREMENT PRIMARY KEY,
+    fk_account        integer,
+    columnmapping     varchar(255),
+    delimiter         varchar(4),
+    dateformat        varchar(32),
+    lineending        varchar(4),
+    escapechar        varchar(4),
+    enclosure         varchar(4),
+    skipfirstline     tinyint(4),
+    rotatecsv         tinyint(4),
+    usedirection      tinyint(4),
+    directioncredit   varchar(64),
+    directiondebit    varchar(64),
+    tms               timestamp,
+    import_key        varchar(14)
 ) ENGINE=innodb;
 

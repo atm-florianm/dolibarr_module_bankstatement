@@ -48,6 +48,12 @@ else header('Cache-Control: no-cache');
 td.col_date { text-align: center; }
 td.col_amount { text-align: right; }
 
+table.setup > tbody td > form > div.justify-content-between {
+	display: flex;
+	/*flex-direction: column;*/
+	justify-content: space-between;
+}
+
 /*col.col_massaction { width: 0px; display: none; }*/
 
 .nocolbreak { break-inside: avoid; }

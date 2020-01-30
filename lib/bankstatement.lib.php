@@ -48,25 +48,25 @@ function bankstatementAdminPrepareHead()
 	$head[$h][2] = 'default';
 	$h++;
 
-	$sql = "SELECT DISTINCT account.rowid, account.label FROM ".MAIN_DB_PREFIX."bank_account as account"
-	     . " WHERE account.entity IN (" . getEntity('bank_account') . ")"
-	     . " ORDER BY account.rowid";
-
-	$resql = $db->query($sql);
-
-	if (!$resql) {
-		setEventMessages("Error ".$db->lasterror(), array(), 'errors');
-		return array();
-	}
-	$nbAccounts = $db->num_rows($resql);
-
-	for ($i = 0; $i < $nbAccounts; $i++, $h++) {
-		$obj = $db->fetch_object($resql);
-		if (empty($obj)) break;
-		$head[$h][0] = dol_buildpath("/bankstatement/admin/setup.php?accountId=" . $obj->rowid, 1);
-		$head[$h][1] = $langs->trans("AccountSettings", $obj->label);
-		$head[$h][2] = 'account' . $obj->rowid;
-	}
+//	$sql = "SELECT DISTINCT account.rowid, account.label FROM ".MAIN_DB_PREFIX."bank_account as account"
+//	     . " WHERE account.entity IN (" . getEntity('bank_account') . ")"
+//	     . " ORDER BY account.rowid";
+//
+//	$resql = $db->query($sql);
+//
+//	if (!$resql) {
+//		setEventMessages("Error ".$db->lasterror(), array(), 'errors');
+//		return array();
+//	}
+//	$nbAccounts = $db->num_rows($resql);
+//
+//	for ($i = 0; $i < $nbAccounts; $i++, $h++) {
+//		$obj = $db->fetch_object($resql);
+//		if (empty($obj)) break;
+//		$head[$h][0] = dol_buildpath("/bankstatement/admin/setup.php?accountId=" . $obj->rowid, 1);
+//		$head[$h][1] = $langs->trans("AccountSettings", $obj->label);
+//		$head[$h][2] = 'account' . $obj->rowid;
+//	}
 
 
 	// Show more tabs from modules
@@ -87,7 +87,7 @@ function bankstatementAdminPrepareHead()
  * @param string $varName   Name for the variable (defaults to 'window.jsonDataArray'). Use a different name
  *                          if you call the function more than once.
  */
-function jsValuesAsJSON($dataArray, $varName = 'window.jsonDataArray')
+function setJavascriptVariables($dataArray, $varName = 'window.jsonDataArray')
 {
 	echo '<script type="application/javascript">' . "\n"
 		. $varName . '=' . json_encode($dataArray) . ";\n"
@@ -103,3 +103,137 @@ function getAmountType($rawAmount) {
 	if ($rawAmount > 0) return DIRECTION_CREDIT;
 	if ($rawAmount < 0) return DIRECTION_DEBIT;
 }
+
+function getDefaultSetupParameters() {
+	return array(
+		'css'       => 'minwidth500',
+		'enabled'   => 1,
+		'inputtype'      => 'text'
+	);
+}
+
+/**
+ * @param $confName
+ * @return string
+ */
+function get_conf_value($confName) {
+	global $conf, $langs, $accountId, $account, $accountConf;
+	$globalConfValue = isset($conf->global->{$confName}) ? $conf->global->{$confName} : '';
+	if (!empty($accountId)) {
+		// account-specific conf
+		$confValue = isset($accountConf[$confName]) ? $accountConf[$confName] : $globalConfValue;
+	} else {
+		// global / default conf
+		$confValue = $globalConfValue;
+	}
+	return $confValue;
+}
+
+/**
+ * @param $confName
+ * @param $parameters
+ * @param $form
+ * @return string
+ */
+function get_conf_label($confName, $parameters, $form) {
+	global $langs;
+	$confHelp = $langs->trans($confName . '_Help');
+	$confLabel = '<label for="' . $confName . '">' . $langs->trans($confName) . '</label>';
+	if (!empty($langs->tab_translate[$confName . '_Help'])) {
+		// help translation found: display help picto
+		return $form->textwithpicto($confLabel, $confHelp);
+	} else {
+		// help translation not found: only display label
+		return $confLabel;
+	}
+}
+
+/**
+ * @param string $code       Name of the configuration option.
+ * @param array  $parameters Options describing the desired form field
+ * @param array  $TAutoParameters Associative array that will be converted to hidden input tags
+ * @return string  A <form> tag containing one field to set the desired configuration option
+ */
+function get_conf_input($code, $parameters, $TAutoParameters = array()) {
+	global $conf, $langs;
+	$confValue = get_conf_value($code);
+	$inputAttrs = sprintf(
+		'name="%s" id="%s" class="%s" data-saved-value="%s"',
+		htmlspecialchars($code, ENT_COMPAT),
+		htmlspecialchars($code, ENT_COMPAT),
+		htmlspecialchars($parameters['css'], ENT_COMPAT),
+		htmlspecialchars($confValue)
+	);
+	if (!empty($parameters['required'])) $inputAttrs .= ' required';
+	switch ($parameters['inputtype']) {
+		case 'bool':
+			// TODO : replace with a one-click toggler
+			$input = '<select id="' . $code . '" name="' . $code . '">'
+					 . '<option value="0">' . $langs->trans('No') . '</option>'
+					 . '<option value="1">' . $langs->trans('Yes') . '</option>'
+					 .'</select>';
+			$input .= '<button class="but" id="btn_save_' . $code . '">' . $langs->trans('Modify') . '</button>';
+			//else print '<a href="'.$_SERVER['PHP_SELF'].'?action=del_'.$code.'&entity='.$entity.'">'.img_picto($langs->trans("Enabled"), 'on').'</a>';
+			if (!empty($parameters['required_by'])) {
+				// enable page reload on value switch
+				foreach ($parameters['required_by'] as $subConfName) {
+					$input .= '<script>$(()=>setVisibilityDependency("' . $code . '", "' . $subConfName . '"));</script>';
+				}
+			}
+			break;
+		case 'select':
+			$options = array();
+			foreach ($parameters['options'] as $label => $value) {
+				$options[] = '<option value="' . $value . '">' . $langs->trans($label) . '</option>';
+			}
+			$input = sprintf(
+						 '<select %s id="%s">%s</select> <button class="but" id="btn_save_%s">%s</button>',
+						 $inputAttrs,
+						 $code,
+						 join("\n", $options),
+						 $code,
+						 $langs->trans('Modify')
+					 ) . '<script type="text/javascript">$(()=>ajaxSaveOnClick("'.htmlspecialchars($code, ENT_COMPAT).'"));</script>';
+			break;
+		case 'text':
+			if (isset($parameters['suggestions'])) {
+				$options = array();
+				foreach ($parameters['suggestions'] as $label => $value) {
+					$options[] = '<option value="' . $value . '">' . $langs->trans($label) . '</option>';
+				}
+				$datalist = sprintf(
+					'<datalist id="%s">%s</datalist>',
+					$code . '_suggestions',
+					join("\n", $options)
+				);
+				$inputAttrs .= ' list="' . $code . '_suggestions' . '"';
+			}
+			if (isset($parameters['pattern'])) {
+				$inputAttrs .= ' pattern="' . $parameters['pattern'] . '"';
+			}
+			$input = sprintf(
+						 '<input %s type="text" value="%s" /> <button class="but" id="btn_save_%s">%s</button>',
+						 $inputAttrs,
+						 htmlspecialchars($confValue, ENT_COMPAT),
+						 $code,
+						 $langs->trans('Modify')
+					 ) . '<script type="text/javascript">$(()=>ajaxSaveOnClick("'.htmlspecialchars($code, ENT_COMPAT).'"));</script>';
+			if (isset($datalist)) $input .= $datalist;
+			break;
+		default:
+			$input = $confValue;
+	}
+	$TAutoParameters['token'] = $TAutoParameters['token'] ? $TAutoParameters['token'] : $_SESSION['newtoken'];
+	$TAutoParameters['action'] = $TAutoParameters['action'] ? $TAutoParameters['action'] : 'update';
+	$THiddenInput = array();
+	foreach ($TAutoParameters as $paramName => $value) {
+		$THiddenInput[] = '<input type="hidden" name="'. htmlspecialchars($paramName) .'" value="'. htmlspecialchars($value) .'" />';
+	}
+	return '<form method="POST" id="form_save_' . $code . '" action="' . $_SERVER['PHP_SELF'] . '">'
+		   . '<div class="justify-content-between">'
+		   . join("\n", $THiddenInput)
+		   . $input
+		   . '</div>'
+		   . '</form>';
+}
+

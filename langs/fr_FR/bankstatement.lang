@@ -50,14 +50,14 @@ ReadBankStatements=Consulter des relevés de banque importés
 WriteBankStatements=Importer, rapprocher, modifier et supprimer des relevés de banque
 
 # Module configuration / setup.php (admin)
-BANKSTATEMENT_SEPARATOR=Séparateur des données du fichier
-BANKSTATEMENT_MAPPING=Correspondance / ordre des colonnes du fichier CSV
+BANKSTATEMENT_DELIMITER=Séparateur des données du fichier
+BANKSTATEMENT_COLUMN_MAPPING=Correspondance / ordre des colonnes du fichier CSV
 BANKSTATEMENT_DATE_FORMAT=Format de date du fichier CSV
 BANKSTATEMENT_USE_DIRECTION=Le format utilise une colonne <b>direction</b>
 BANKSTATEMENT_DIRECTION_CREDIT=Valeur pour crédit
 BANKSTATEMENT_DIRECTION_DEBIT=Valeur si débit
-BANKSTATEMENT_HEADER=Le fichier contient une ligne d'en-tête
-BANKSTATEMENT_LINE_SEPARATOR=Séparateur de fin de ligne (ex : Mac)
+BANKSTATEMENT_SKIP_FIRST_LINE=Le fichier contient une ligne d'en-tête
+BANKSTATEMENT_LINE_ENDING=Séparateur de fin de ligne (ex : Mac)
 BANKSTATEMENT_HISTORY_IMPORT=Activer l'historisation des imports avec le contenu du fichier
 BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD=Autoriser le règlement / rapprochement sur des factures appartenant à différents tiers
 BANKSTATEMENT_ALLOW_DRAFT_INVOICE=Autoriser le rapprochement sur des factures au statut brouillon (validation de la facture et création du règlement)
@@ -66,14 +66,14 @@ BANKSTATEMENT_AUTO_CREATE_DISCOUNT=Convertir automatiquement les acomptes en red
 BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL=Chercher les lignes d'écritures bancaires par montant ET par libellé
 BANKSTATEMENT_ALLOW_FREELINES=Autoriser la création d'écritures bancaires libres (non liées à un règlement)
 
-BANKSTATEMENT_SEPARATOR_Help=Caractère utilisé pour séparer les colonnes de votre fichier CSV (habituellement ";" ou ",". Un seul caractère).
+BANKSTATEMENT_DELIMITER_Help=Caractère utilisé pour séparer les colonnes de votre fichier CSV (habituellement ";" ou ",". Un seul caractère).
 BANKSTATEMENT_MAPPING_Help=Colonnes obligatoires : "<b>date</b>" et "<b>label</b>".<br/>Le montant (obligatoire) peut être sous plusieurs formes : <ul><li>deux colonnes "<b>debit</b>" et "<b>credit</b>" </li><li> deux colonnes "<b>amount</b>" et "<b>direction</b>" </li><li>une seule colonne "<b>amount</b>" dont le signe détermine la direction</li></ul>Si votre fichier contient d'autres colonnes, nommez-les "<b>null</b>" dans la correspondance ou laissez-les vides.
 BANKSTATEMENT_DATE_FORMAT_Help=Format de date utilisé dans votre fichier CSV (<b>d</b> correspond au jour sur deux caractères, <b>m</b> au mois sur deux caractère et <b>Y</b> l'année sur 4 caractères). Par exemple la date 25/07/2013 correspond au format d/m/Y.
 BANKSTATEMENT_USE_DIRECTION_Help=Le fichier CSV possède une colonne montant de la transaction en valeur absolue ("<b>amount</b>" dans la correspondance) et une colonne indiquant s’il s’agit d’un crédit ou d’un débit ("<b>direction</b>" dans la correspondance). <br/> S’il n’y a pas de colonne "<b>direction</b>" mais qu’il y a une colonne "<b>amount</b>", cette colonne doit alors contenir des nombres négatifs pour les débits et positifs pour les crédits.
 BANKSTATEMENT_DIRECTION_CREDIT_Help=La valeur de la colonne 'direction' qui indique que le montant de la transaction est un crédit. Par exemple, 'crédit' ou '+' ou vide…
 BANKSTATEMENT_DIRECTION_DEBIT_Help=La valeur de la colonne 'direction' qui indique que le montant de la transaction est un débit. Par exemple, 'débit' ou '-'…
 BANKSTATEMENT_HEADER_Help=Si activé, la première ligne du fichier CSV sera considérée comme une ligne d’en-tête et non de données.
-BANKSTATEMENT_LINE_SEPARATOR_Help=Utiliser cette option si le fichier utilise le retour chariot comme caractère de fin de ligne (c’est le cas pour certains fichiers générés avec MacOS)
+BANKSTATEMENT_LINE_ENDING_Help=Utiliser cette option si le fichier utilise le retour chariot comme caractère de fin de ligne (c’est le cas pour certains fichiers générés avec MacOS)
 BANKSTATEMENT_HISTORY_IMPORT_Help= (<b>Attention : une ligne d'en-tête doit être présente dans votre fichier</b>)
 BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD_Help=
 BANKSTATEMENT_ALLOW_DRAFT_INVOICE_Help=
