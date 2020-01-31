@@ -50,7 +50,7 @@ $langs->load('bankstatement@bankstatement');
 // including all translations is maybe a bit too heavy.
 //echo 'let _trans = ' . json_encode($langs->tab_translate) . ';';
 ?>
-if (!_trans) _trans = [];
+if (typeof _trans === 'undefined') _trans = [];
 
 (function () {
 		return;

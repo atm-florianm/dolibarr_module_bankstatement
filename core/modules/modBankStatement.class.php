@@ -131,7 +131,7 @@ class modBankStatement extends DolibarrModules
 		//       selected already.
 		$this->tabs = array('bank'
 							. ':+csvimportconf'
-							. ':CsvImportConf'
+							. ':CSVImportConf'
 							. ':bankstatement@bankstatement'
 							. ':$user->rights->bankstatement->write'
 							. ':/bankstatement/admin/account-CSV-setup.php?accountid=__ID__');

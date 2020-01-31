@@ -15,7 +15,7 @@
 
 CREATE TABLE llx_bankstatement_importformat(
     rowid             integer AUTO_INCREMENT PRIMARY KEY,
-    fk_account        integer,
+    fk_account        integer NULL,
     columnmapping     varchar(255),
     delimiter         varchar(4),
     dateformat        varchar(32),

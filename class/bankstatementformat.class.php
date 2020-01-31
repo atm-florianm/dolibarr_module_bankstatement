@@ -307,24 +307,32 @@ class BankStatementFormat
 			if (empty($obj)) {
 				return 0;
 			}
+			foreach ($this->fields as $fieldName => $fieldParams) {
+				$dbFieldName = strtolower($fieldName);
+				$value = $obj[$dbFieldName];
+				$confName = isset($fieldParams['conf']) ? $fieldParams['conf'] : null;
+				if (empty($value) && $value != 0 && !empty($confName) && !empty($conf->global->{$confName})) {
+					// load only empty values from $conf
+					$value = $conf->global->{$confName};
+				}
+				$this->{$fieldName} = $value;
+			}
 		} else {
-			// an empty $obj ensures that all values will be loaded from $conf
-			$obj = array();
+			// load from $conf
+			foreach ($this->fields as $fieldName => $fieldParams) {
+				$confName = isset($fieldParams['conf']) ? $fieldParams['conf'] : null;
+				if ($confName) {
+					$this->{$fieldName} = $conf->global->{$confName};
+				}
+			}
 		}
 
 		/*
 		 * All empty values from the account configuration will be replaced
 		 * with the $conf->global equivalent.
 		 */
-		foreach ($this->fields as $fieldName => $fieldParams) {
-			$dbFieldName = strtolower($fieldName);
-			$value = $obj[$dbFieldName];
-			$confName = isset($fieldParams['conf']) ? $fieldParams['conf'] : null;
-			if (empty($value) && !empty($confName) && !empty($conf->global->{$confName})) {
-				$value = $conf->global->{$confName};
-			}
-			$this->{$fieldName} = $value;
-		}
+		// TODO: simplify this!! instead of saving every value in a conf, save a row in llx_bankstatement_importformat
+		//       with no fk_account (change the foreign key constraint if need be) and save the resulting ID in a const.
 		$this->_initMappingArrays();
 		$this->directionMapping = array(
 		);

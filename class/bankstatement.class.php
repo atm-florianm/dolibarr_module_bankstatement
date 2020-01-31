@@ -48,7 +48,7 @@ class BankStatement extends CommonObject
 	/**
 	 * @var int  Does bankstatement support multicompany module ? 0=No test on entity, 1=Test with field entity, 2=Test with link by societe
 	 */
-	public $ismultientitymanaged = 0;
+	public $ismultientitymanaged = 1;
 
 	/**
 	 * @var int  Does bankstatement support extrafields ? 0=No, 1=Yes
@@ -320,7 +320,8 @@ class BankStatement extends CommonObject
 			$this->db->commit();
 		} else {
 			$this->db->rollback();
-			$this->_setError($langs->trans('CSVImportError', $this->getAccount()->getNomUrl()));
+			$link = '<a href="' . getAccountCSVConfigURL($this->fk_account) . '">' . $this->getAccount()->label . '</a>';
+			$this->_setError($langs->trans('CSVImportError', $link));
 			return false;
 		}
 
@@ -948,13 +949,31 @@ class BankStatement extends CommonObject
 	 */
 	public function showInputField($val, $key, $value, $moreparam = '', $keysuffix = '', $keyprefix = '', $morecss = 0, $nonewbutton = 0)
 	{
+		global $langs;
 		switch($key)
 		{
 			case 'fk_account':
 				$form = new Form($this->db);
 				$form->select_comptes($this->fk_account ?: -1, 'fk_account', 0, 'courant <> 2', 1, 'required');
 				// the empty select should have empty value or the 'required' attribute will be useless
-				echo '<script>$("#selectfk_account option[value=-1]").attr("value", "")</script>';
+				?>
+				<span><a style="display: none;" id="accountConfigLink" href=""><?php echo $langs->trans('AccountCSVConfig'); ?></a></span>
+				<script>
+					$("#selectfk_account option[value=-1]").attr("value", "");
+					$('#selectfk_account').change(function () {
+						let accountId = $(this).val();
+						let url = '<?php echo dol_buildpath('/bankstatement/admin/account-CSV-setup.php?accountid=', 1); ?>'
+							+ accountId;
+						if (!accountId) {
+							url = '';
+							$('#accountConfigLink').hide();
+						} else {
+							$('#accountConfigLink').attr('href', url);
+							$('#accountConfigLink').show();
+						}
+					})
+				</script>
+				<?php
 				return '';
 			case 'status':
 				return '';

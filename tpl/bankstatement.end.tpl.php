@@ -1,8 +1,8 @@
 <div class="center">
-<a href="<?php echo dol_buildpath('/bankimport/releve.php', 2); ?>?account=<?php echo $transactionCompare->account->id ?>&amp;num=<?php echo $bankImport->numReleve ?>">
+<a href="<?php echo dol_buildpath('/compta/bank/bankentries_list.php', 2); ?>?id=<?php echo $transactionCompare->account->id ?>">
 	<?php
 	echo $langs->trans(
-		'StatementCreatedAndDataImported',
+		'ReconciliationDone',
 		$transactionCompare->nbReconciled,
 		$transactionCompare->nbCreated);
 	?>

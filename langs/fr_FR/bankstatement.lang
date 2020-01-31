@@ -16,6 +16,7 @@
 
 # Module label
 ModuleBankStatementName = Import de relevés de banque
+BankStatementTitle = Import de relevés
 
 # Module description
 ModuleBankStatementDesc = Permet d’importer des relevés de comptes bancaires en CSV pour rapprochement automatique
@@ -37,7 +38,7 @@ LeftMenuBankStatement_create=<span title="Pour importer un relevé">Importer un 
 
 # Setup
 BankStatementSetup = Configuration du module Import de relevés de banque
-BankStatementSetupPage = Ici, vous pouvez configurer le module Import de relevés de banque. N’oubliez pas de sauvegarder chacune de vos modifications.
+BankStatementSetupPage = Ici, vous pouvez configurer le module « Import de relevés de banque ». N’oubliez pas de sauvegarder chacune de vos modifications.
 ValueSaved=Option enregistrée :
 ValueUnchanged=Option déjà enregistrée
 NoValueToSave=Toutes les options sont déjà enregistrées
@@ -86,10 +87,15 @@ Tabulation=Tabulation (<b>↹</b>)
 Comma=Virgule (,)
 Colon=Deux-points (:)
 Pipe=Barre verticale (|)
+Semicolon=Point-virgule (;)
 SaveAll=Sauvegarder tout
+
+# Admin page : defauld CSV setup
+DefaultCSVFormatConf=Configurer le format d’import CSV par défaut
 
 # Account-specific setup
 CSVImportConf=Configurer import CSV
+AccountCSVFormatConf=Configurer le format d’import CSV spécifique du compte « %s »
 
 
 # Setup errors
@@ -124,9 +130,12 @@ Reconcile = Rapprocher
 
 # Card
 FileToImport=Fichier à importer
+AccountCSVConfig=Configurer le format d’import
 
 # Compare/reconcile page
 ApplyConciliation=Appliquer les actions de rapprochement sélectionnées (rapprochements automatiques et création d’écritures)
 ErrorAccountIdNotSelected=Erreur : il est nécessaire de sélectionner un compte bancaire avant de procéder au rapprochement.
-StatementCreatedAndDataImported=Actions effectuées : %d transactions rapprochées et %d écritures créées.
+ReconciliationDone=Actions effectuées : %d transactions rapprochées et %d écritures créées.
 BankStatementCompareTitle=Sélection des actions de rapprochement
+ErrorMoreThanOneAccountSelected=Erreur : les lignes sélectionnées appartiennent à plusieurs comptes. Veuillez sélectionner uniquement des lignes du même compte.
+BankStatementCreateFreeLine=Écriture bancaire libre

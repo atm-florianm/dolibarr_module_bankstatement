@@ -48,7 +48,7 @@ $langs->load('bankstatement@bankstatement');
 
 //echo 'let _trans = ' . json_encode($langs->tab_translate) . ';';
 ?>
-if (!_trans) _trans = [];
+if (typeof _trans === 'undefined') _trans = [];
 
 /* Javascript library of module BankStatement */
 

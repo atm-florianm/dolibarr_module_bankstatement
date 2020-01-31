@@ -256,34 +256,35 @@ if (empty($reshook))
 		$accountId = intval($obj->fk_account);
 		if ($nbAccounts !== 1) {
 			// TODO: handle error
-			var_dump($langs->trans('ErrorMoreThanOneAccountSelected'));
+			setEventMessages($langs->trans('ErrorMoreThanOneAccountSelected'), array(), 'errors');
+		} else {
+			$transactionCompare = new TransactionCompare($db);
+			$form = new Form($db);
+			$transactionCompare->fetchAccount($accountId);
+			$transactionCompare->load_transactions($TLineId);
+
+			if ($actionApplyConciliation) {
+				$tpl = 'tpl/bankstatement.end.tpl.php';
+				$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
+				//	$transactionCompare->load_imported_transactions($TLineId);
+				//	$transactionCompare->load_bank_transactions()
+				$transactionCompare->applyConciliation(GETPOST('TLine', 'array'));
+			} else {
+				$tpl = 'tpl/bankstatement.check.tpl.php';
+				//	$transactionCompare->load_transactions($TLineId);
+				$transactionCompare->compare_transactions();
+				$TTransactions = $transactionCompare->TImportedLines;
+			}
+
+			llxHeader('', $langs->trans('BankStatementCompareTitle'));
+			print_fiche_titre($langs->trans("BankStatementCompareTitle"));
+
+			include 'tpl/bankstatement.common.tpl.php';
+			include $tpl;
+			llxFooter();
 			exit;
 		}
 
-		$transactionCompare = new TransactionCompare($db);
-		$form = new Form($db);
-		$transactionCompare->fetchAccount($accountId);
-		$transactionCompare->load_transactions($TLineId);
-
-		if ($actionApplyConciliation) {
-			$tpl = 'tpl/bankstatement.end.tpl.php';
-			$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
-			//	$transactionCompare->load_imported_transactions($TLineId);
-			//	$transactionCompare->load_bank_transactions()
-			$transactionCompare->applyConciliation(GETPOST('TLine', 'array'));
-		} else {
-			$tpl = 'tpl/bankstatement.check.tpl.php';
-			//	$transactionCompare->load_transactions($TLineId);
-			$transactionCompare->compare_transactions();
-			$TTransactions = $transactionCompare->TImportedLines;
-		}
-
-		llxHeader('', $langs->trans('BankStatementCompareTitle'));
-		print_fiche_titre($langs->trans("BankStatementCompareTitle"));
-
-		include 'tpl/bankstatement.common.tpl.php';
-		include $tpl;
-		exit;
 	}
 }
 
@@ -321,9 +322,8 @@ $sqlSelect = preg_replace('/,\s*$/', '', $sqlSelect);
 $sqlFrom = "FROM ".MAIN_DB_PREFIX.$object->table_element." as t";
 if (is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label']))
 	$sqlFrom .= " LEFT JOIN ".MAIN_DB_PREFIX.$object->table_element."_extrafields as ef on (t.rowid = ef.fk_object)";
-$sqlWhere = 'WHERE';
-if ($object->ismultientitymanaged == 1) $sqlWhere .= " t.entity IN (".getEntity($object->element).")";
-else $sqlWhere .= " 1 = 1";
+$sqlWhere = 'WHERE bs.entity IN (' . getEntity($object->element) . ')';
+//if ($object->ismultientitymanaged == 1) $sqlWhere .= " t.entity IN (".getEntity($object->element).")";
 
 // load fk_account
 $sqlSelect .= ', bs.fk_account AS fk_account';

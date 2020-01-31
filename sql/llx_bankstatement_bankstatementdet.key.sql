@@ -17,3 +17,5 @@
 ALTER TABLE llx_bankstatement_bankstatementdet ADD INDEX idx_bankstatement_bankstatementdet_rowid (rowid);
 -- END MODULEBUILDER INDEXES
 
+ALTER TABLE llx_bankstatement_bankstatementdet ADD CONSTRAINT llx_bankstatement_bankstatementdet_fk_bankstatement FOREIGN KEY (fk_bankstatement) REFERENCES llx_bankstatement_bankstatement(rowid);
+

@@ -6,6 +6,7 @@ class TransactionCompare
 	/** @var string Negative direction token */
 	private $neg_dir;
 
+	/** @var DoliDB $db */
 	protected $db;
 
 	/** @var Account */
@@ -85,6 +86,12 @@ class TransactionCompare
 		$sql.= "ORDER BY datev DESC";
 
 		$resql = $this->db->query($sql);
+		if (!$resql) {
+			global $langs;
+//			var_dump($sql);
+			setEventMessages($langs->trans('SQLError', $this->db->lasterror()), array(), 'errors');
+			return;
+		}
 		$TBankLineId = array();
 		while($obj = $this->db->fetch_object($resql)) {
 			$TBankLineId[] = $obj->rowid;
@@ -192,7 +199,7 @@ class TransactionCompare
 		$amount = floatval($amount); // Transform to float
 		foreach($this->TBank as $i => $bankLine) {
 			$test = ($amount == $bankLine->amount);
-			if($conf->global->BANKIMPORT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL) $test = ($amount == $bankLine->amount && $label == $bankLine->label);
+			if($conf->global->BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL) $test = ($amount == $bankLine->amount && $label == $bankLine->label);
 			if(!empty($test)) {
 				unset($this->TBank[$i]);
 
@@ -388,7 +395,7 @@ class TransactionCompare
 		foreach($TLine as $bankLineId => $iImportedLine)
 		{
 			$this->reconcile_bank_transaction($this->TBank[$bankLineId], $this->TImportedLines[$iImportedLine]);
-//			if (!empty($conf->global->BANKIMPORT_HISTORY_IMPORT) && $bankLineId > 0)
+//			if (!empty($conf->global->BANKSTATEMENT_HISTORY_IMPORT) && $bankLineId > 0)
 //			{
 //				$this->insertHistoryLine($PDOdb, $iImportedLine, $bankLineId);
 //			}
@@ -445,14 +452,14 @@ class TransactionCompare
 	{
 		global $conf, $langs,$user;
 
-		$note = $langs->trans('TitleBankImport');
+		$note = $langs->trans('BankStatementTitle');
 
 		if ($type == 'payment') $paiement = new Paiement($this->db);
 		elseif ($type == 'payment_supplier') $paiement = new PaiementFourn($this->db);
 		elseif ($type == 'payment_supplier') $paiement = new PaymentSocialContribution($this->db);
-		else exit($langs->trans('BankImport_FatalError_PaymentType_NotPossible', $type));
+		else exit($langs->trans('BankStatement_FatalError_PaymentType_NotPossible', $type));
 
-		if(!empty($conf->global->BANKIMPORT_ALLOW_DRAFT_INVOICE)) $this->validateInvoices($TAmounts, $type);
+		if(!empty($conf->global->BANKSTATEMENT_ALLOW_DRAFT_INVOICE)) $this->validateInvoices($TAmounts, $type);
 
 		$paiement->datepaye     = $date_paye;
 		$paiement->amounts      = $TAmounts;   // Array with all payments dispatching
@@ -485,7 +492,7 @@ class TransactionCompare
 			}
 
 			// Uniquement pour les factures client (les acomptes fournisseur n'existent pas)
-			if($conf->global->BANKIMPORT_AUTO_CREATE_DISCOUNT && $type === 'payment') $this->createDiscount($TAmounts);
+			if($conf->global->BANKSTATEMENT_AUTO_CREATE_DISCOUNT && $type === 'payment') $this->createDiscount($TAmounts);
 
 			return $bankLineId;
 		}

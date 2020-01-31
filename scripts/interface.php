@@ -1,25 +1,68 @@
 <?php
+// Load Dolibarr environment
+$mainIncludePath = '../../main.inc.php';
+$MAX_BACKTRACK=5; // max depth for finding 'main.inc.php' in parent directories
+for ($resInclude = 0, $depth = 0; !$resInclude && $depth < $MAX_BACKTRACK; $depth++) {
+	$resInclude = @include $mainIncludePath;
+	$mainIncludePath = '../' . $mainIncludePath;
+}
+if (!$resInclude) die ('Unable to include main.inc.php');
 
-	require '../config.php';
+$get = GETPOST('get', 'aZ09');
+$set = GETPOST('set', 'aZ09');
+if ($get !== '' && $set !== '') {
+	failureResponse("AjaxQueryCannotBeGetAndSet");
+} elseif ($get) {
+	switch ($get) {
+		case 'pieceList':
+			print _get_pieceList(
+				GETPOST('i'),
+				GETPOST('fk_soc'),
+				GETPOST('type')
+			);
+			exit;
+	}
+} elseif ($set) {
+	switch ($set) {
+		case 'const':
+			_set_const(
+				GETPOST('name', 'aZ09'),
+				GETPOST('value', 'alpha')
+			);
+			exit;
+		case '':
+	}
+}
+
+/**
+ * Prints a JSON failure response with a reason and exits.
+ * @param $reason
+ */
+function failureResponse($reason = '') {
+	echo json_encode(array('response' => 'failure', 'reason' => $reason));
+	exit;
+}
+
+/**
+ *
+ */
+function successResponse() {
+	echo json_encode(array('response' => 'success'));
+	exit;
+}
+
+/**
+ * @param $i
+ * @param $fk_soc
+ * @param $type
+ * @return string
+ */
+function _get_pieceList($i, $fk_soc, $type) {
+	global $db, $langs, $conf;
 	dol_include_once('/compta/facture/class/facture.class.php');
 	dol_include_once('/societe/class/societe.class.php');
 	dol_include_once('/fourn/class/fournisseur.facture.class.php');
 	dol_include_once('/compta/sociales/class/chargesociales.class.php');
-	
-	$get=GETPOST('get');
-	
-	switch ($get) {
-		case 'pieceList':
-			
-			print _pieceList(GETPOST('i'),GETPOST('fk_soc'),GETPOST('type'));
-			
-			break;
-		
-	}
-
-	
-function _pieceList($i, $fk_soc, $type) {
-	global $db, $langs, $conf;
 	
 	$langs->load('compta');
 	
@@ -101,8 +144,30 @@ function _pieceList($i, $fk_soc, $type) {
 		}		
 	}
 	
-		
-	
 	return $r;
-	
+}
+
+/**
+ * Set or delete (if $value is empty) a configuration row in llx_const
+ * @param string $name
+ * @param string $value
+ */
+function _set_const($name, $value) {
+	global $conf, $user, $db;
+	// check that the user is admin
+	if (!$user->admin) {
+		// security: only admin can set const
+		failureResponse('Denied:AdminOnly');
+	}
+	if (!preg_match('/^BANKSTATEMENT_/', $name)) {
+		// security: limit what a successful XSS injection could do
+		failureResponse('Denied:TryingToSetOtherModuleConst');
+	}
+
+	if ($value !== '') {
+		dolibarr_set_const($db, $name, $value, 'chaine', 0, '', $conf->entity);
+	} else {
+		dolibarr_del_const($db, $name, $conf->entity);
+	}
+	successResponse();
 }

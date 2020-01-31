@@ -33,10 +33,15 @@ if (!$resInclude) die ('Unable to include main.inc.php');
 global $langs, $user;
 
 // Libraries
-require_once DOL_DOCUMENT_ROOT . "/core/lib/admin.lib.php";
 require_once DOL_DOCUMENT_ROOT.'/core/lib/bank.lib.php';
 require_once '../lib/bankstatement.lib.php';
 require_once '../class/bankstatementformat.class.php';
+
+// Translations
+$langs->loadLangs(array("admin", "bankstatement@bankstatement"));
+
+// Access control
+if (! $user->rights->bankstatement->write) accessforbidden();
 
 // Configuration data
 $separatorChoices = array(
@@ -46,6 +51,7 @@ $separatorChoices = array(
 	'Colon'      => ':',
 	'Pipe'       => '|',
 );
+
 $lineSeparatorChoices = array(
 	'LineSeparatorDefault' => '',
 	'LineSeparatorWindows' => "\\r\\n",
@@ -53,7 +59,7 @@ $lineSeparatorChoices = array(
 	'LineSeparatorMac'     => "\\r"
 );
 
-$specificParameters=array(
+$TConfigFieldParameters=array(
 	'BANKSTATEMENT_COLUMN_MAPPING'                      => array('required' => 1, 'pattern' => '.*(?=.*\\bdate\\b)(?=.*\\blabel\\b)((?=.*\\bcredit\\b)(?=.*\\bdebit\\b)|(?=.*\\bamount\\b)).*'),
 	'BANKSTATEMENT_DELIMITER'                           => array('required' => 1, 'pattern' => '^.$', 'suggestions' => $separatorChoices,),
 	'BANKSTATEMENT_DATE_FORMAT'                         => array('required' => 1,),
@@ -70,18 +76,7 @@ $specificParameters=array(
 //	'BANKSTATEMENT_ALLOW_FREELINES'                     => array('inputtype' => 'bool',)
 );
 
-$TConstParameter = array_map(
-	function($specificParameters) {
-		return $specificParameters + getDefaultSetupParameters(); // specific parameters override default
-	},
-	$specificParameters
-);
-
-// Translations
-$langs->loadLangs(array("admin", "bankstatement@bankstatement"));
-
-// Access control
-if (! $user->admin) accessforbidden();
+$TConstParameter = normalizeConfigFieldParams($TConfigFieldParameters);
 
 // Parameters
 $action = GETPOST('action', 'alpha');
@@ -110,7 +105,9 @@ if ($resLoad === -1) {
 } elseif ($resLoad === 0) {
 	// no error: there is no BankStatementFormat associated with this account yet.
 	// load default values from $conf
-	$CSVFormat->load(0);
+	if ($CSVFormat->load(0) < 0) {
+		// TODO: handle error
+	}
 } else {
 	// successfully loaded
 }
@@ -144,55 +141,17 @@ if ($nbValuesToSave) {
 $page_name = "BankStatementSetup";
 llxHeader('', $langs->trans($page_name));
 
-setJavascriptVariables(array('accountId' => $account->id), 'window.jsonDataArray');
-
-//
 //// Subheader
 //$linkback = '<a href="'.($backtopage?$backtopage:DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1').'">'.$langs->trans("BackToModuleList").'</a>';
-//
-//print load_fiche_titre($langs->trans($page_name), $linkback, 'object_bankstatement@bankstatement');
 
 // Configuration header
 $head = bank_prepare_head($account);
 
 dol_fiche_head($head, $activeTabName, '', -1, "bankstatement@bankstatement");
 
-$form = new Form($db);
-// Setup page goes here
-?><noscript><style> .jsRequired { display: none } </style></noscript>
-<p><?php echo $langs->trans("BankStatementSetupPage"); ?></p>
-<table class="noborder setup" width="100%">
-	<colgroup><col id="setupConfLabelColumn"/><col id="setupConfValueColumn" /></colgroup>
-	<thead>
-	<tr class="liste_titre">
-		<td class="titlefield">
-			<?php echo $langs->trans("Parameter"); ?>
-		</td>
-		<td>
-			<?php echo $langs->trans("Value"); ?>
-		</td>
-	</tr>
-	</thead>
-	<tbody>
-	<?php
-	foreach ($TConstParameter as $confName => $confParams) {
-		$tableRowClass = 'oddeven';
-		if (!empty($confParams['depends']) && empty($conf->global->{$confParams['depends']})) {
-			// do not show configuration input if it depends on a disabled option
-			$tableRowClass .= ' hide_conf';
-		}
-		$confLabel = get_conf_label($confName, $TConstParameter[$confName], $form);
-		$confInput = get_conf_input($confName, $TConstParameter[$confName], array('accountid' => $account->id));
-		echo '<tr class="' . $tableRowClass . '">'
-			. '<td class="configLabel">' . $confLabel . '</td>'
-			. '<td class="configInput">' . $confInput . '</td>'
-			. '</tr>';
-	}
-	?>
-	<tr><td></td><td><button onclick="saveAll('BANKSTATEMENT_')" class="button jsRequired"><?php echo $langs->trans('SaveAll');?></button></td></tr>
-	</tbody>
-</table>
-<?php
+print "<p>" . $langs->trans("BankStatementSetupPage") . "</p>";
+
+printCSVFormatEditor($db, $CSVFormat, $TConstParameter, $langs->trans('AccountCSVFormatConf', $account->label));
 
 // Page end
 dol_fiche_end();
