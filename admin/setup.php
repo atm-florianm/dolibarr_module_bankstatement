@@ -135,11 +135,13 @@ if ($nbValuesToSave) {
 	$CSVFormat->save(0);
 }
 
+setJSONDataArray(array('accountId' => $CSVFormat->fk_account));
 /*
  * Main View
  */
 $page_name = "BankStatementSetup";
 llxHeader('', $langs->trans($page_name));
+echo '<script type="application/javascript" src="' . dol_buildpath('/bankstatement/js/bankstatement_setup.js.php', 1) . '"></script>';
 
 // Subheader
 $linkback = '<a href="'.($backtopage?$backtopage:DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1').'">'.$langs->trans("BackToModuleList").'</a>';

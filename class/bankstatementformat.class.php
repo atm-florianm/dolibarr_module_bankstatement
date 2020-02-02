@@ -60,7 +60,6 @@ class BankStatementFormat
 		'directionCredit'  => array('conf' => 'BANKSTATEMENT_DIRECTION_CREDIT', 'type' => 'varchar',),
 		'directionDebit'   => array('conf' => 'BANKSTATEMENT_DIRECTION_DEBIT',  'type' => 'varchar',),
 	);
-	public $fieldByConfName = array();
 	public $columnMapping = 'date;label;credit;debit';
 	public $dateFormat = 'Y-m-d';
 	public $enclosure  = '"';
@@ -277,8 +276,19 @@ class BankStatementFormat
 	 * @param $fieldValue
 	 * @return bool
 	 */
-	public function setFieldValue($fieldName, $fieldValue)
+	public function setFieldValue($fieldName, $fieldValue, $fromConstName = false)
 	{
+		if ($fromConstName) {
+			$found = false;
+			foreach ($this->fields as $name => $params) {
+				if ($params['conf'] === $fieldName) {
+					$found = true;
+					$fieldName = $name;
+				}
+			}
+			if (!$found) return false;
+		}
+
 		if (!array_key_exists($fieldName, $this->fields)) return false;
 		$fieldParams = $this->fields[$fieldName];
 		$type = $fieldParams['type'];

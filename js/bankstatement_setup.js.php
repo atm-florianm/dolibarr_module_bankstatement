@@ -48,146 +48,130 @@ $langs->load('bankstatement@bankstatement');
 
 
 // including all translations is maybe a bit too heavy.
-//echo 'let _trans = ' . json_encode($langs->tab_translate) . ';';
+
+echo 'let _trans = ' . json_encode(
+	array_intersect_key(
+		$langs->tab_translate,
+		array_flip(
+			array(
+				'valueSaved',
+				'valueUnchanged',
+				'noValueToSave',
+			)
+		)
+	)
+) . ';';
 ?>
 if (typeof _trans === 'undefined') _trans = [];
+function translate(key) {
+	if (typeof _trans[key] === 'undefined') return key;
+	return _trans[key];
+}
 
-(function () {
-		return;
-		window.addEventListener('load', function() {
-			/**
-			 * Asynchronously save a setup config value when the conf-specific form is submitted.
-			 *
-			 * Example:
-			 *   DOM:
-			 *   <form id="form_save_MODULE_OPTION">
-			 *       <input id="MODULE_OPTION" name="MODULE_OPTION" />
-			 *       <button id="save_MODULE_OPTION">Save</button>
-			 *   </form>
-			 *   Js:  ajaxSaveOnClick("MODULE_OPTION")
-			 *
-			 * @param code  The constant name; the DOM must have a HTMLElement with the id "save_" + code
-			 */
-			window.ajaxSaveOnClick = function (code) {
-				let url = window.location.origin + window.location.pathname;
-				let $formField = $('#' + code);
-				$formField.closest('form').submit(
-					function(ev) {
-						if (isUnsaved(code)) {
-							let value = $('#' + code).val()
-							let action = 'ajax_set_const';
-							if (value == '') action = 'del';
-							$.get(
-								url,
-								{
-									accountId: window.jsonDataArray.accountId,
-									action: action,
-									name: code,
-									value: value
-								},
-								function (response) {
-									$.jnotify(_trans['ValueSaved']+ ' ' + _trans[code], 'mesgs');
-									$formField.attr('data-saved-value', value)
-								}
-							);
-						} else {
-							$.jnotify(_trans['ValueUnchanged'], 'warning');
-							ev.preventDefault();
-							return;
+
+$(function () {
+	$('.ajaxSaveOnClick').each(
+		function () {
+			ajaxSaveOnClick($(this).attr('name'));
+		}
+	);
+});
+
+/**
+ * Asynchronously save a setup config value when the conf-specific form is submitted.
+ *
+ * Example:
+ *   DOM:
+ *   <form id="form_save_MODULE_OPTION">
+ *       <input id="MODULE_OPTION" name="MODULE_OPTION" />
+ *       <button id="save_MODULE_OPTION">Save</button>
+ *   </form>
+ *   Js:  ajaxSaveOnClick("MODULE_OPTION")
+ *
+ * @param code  The constant name; the DOM must have a HTMLElement with the id "save_" + code
+ */
+window.ajaxSaveOnClick = function (code) {
+	let url = <?php echo '"' . dol_buildpath('/bankstatement/scripts/interface.php', 1) . '"'; ?>;
+	let $formField = $('#' + code);
+	$formField.closest('form').submit(
+		function(ev) {
+			if (isUnsaved(code)) {
+				let value = $('#' + code).val();
+				//if (value == '') action = 'del';
+				$.get(
+					url,
+					{
+						accountId: window.jsonDataArray.accountId,
+						set: 'bankstatementformatvalue',
+						name: code,
+						value: value
+					},
+					function (response) {
+						try {
+							response = JSON.parse(response);
+							if (response.response === 'success') {
+								$.jnotify(translate('ValueSaved')+ ' ' + translate(code), 'mesgs');
+								$formField.attr('data-saved-value', value)
+							}
+							if (response.response === 'failure') {
+								$.jnotify(translate('Error') + ' ' + translate(response.reason), 'error');
+							}
+						} catch(error) {
 						}
-						ev.preventDefault();
 					}
 				);
+			} else {
+				$.jnotify(translate('valueUnchanged'), 'warning');
+				ev.preventDefault();
+				return;
 			}
+			ev.preventDefault();
+		}
+	);
+}
 
-			/**
-			 * Toggle some visibility switches after a particular element is clicked.
-			 * Enables you to not display some conf inputs if a boolean config they depend
-			 * on is disabled.
-			 * @param confName
-			 * @param confName2
-			 */
-			window.setVisibilityDependency = function (confName, confName2) {
-				let toggleShowInput = function() {
-					$('#' + confName2).closest('tr').toggleClass('hide_conf');
-				};
-				$('#set_' + confName).click(toggleShowInput);
-				$('#del_' + confName).click(toggleShowInput);
-			}
+/**
+ * Toggle some visibility switches after a particular element is clicked.
+ * Enables you to not display some conf inputs if a boolean config they depend
+ * on is disabled.
+ * @param confName
+ * @param confName2
+ */
+window.setVisibilityDependency = function (confName, confName2) {
+	console.log(confName, confName2);
+	let toggleShowInput = function() {
+		$('#' + confName2).closest('tr').toggleClass('hide_conf');
+	};
+	//$('#set_' + confName).click(toggleShowInput);
+	//$('#del_' + confName).click(toggleShowInput);
+	$('#' + confName).change(toggleShowInput); // todo: change this if the widget is changed
+}
 
-			window.isUnsaved = function (confName) {
-				let formField = $('#' + confName);
-				return formField.val() != formField.attr('data-saved-value');
-			}
+window.isUnsaved = function (confName) {
+	let formField = $('#' + confName);
+	return formField.val() != formField.attr('data-saved-value');
+}
 
-			/**
-			 * Saves all unsaved confs (except those not displayed).
-			 *
-			 * @param confPrefix
-			 */
-			window.saveAll = function (confPrefix) {
-				let toBeSaved = $('form[id^=form_save_' + confPrefix + ']:visible').filter(function(n, form) {
-					let confName = form.id.replace(/^form_save_/g, '');
-					return isUnsaved(confName);
-				});
-				if (toBeSaved.length === 0) {
-					$.jnotify(_trans['NoValueToSave'], 'warning');
-				}
-				toBeSaved.each(function(n, form) {
-					/*
-					Note : we trigger a button click instead of a form submit
-					because form submit bypasses HTML5 validation: this would happily
-					disregard the "required", "pattern", etc. attributes.
-					*/
-					//$(form).trigger('submit');
-					$(form).find('button[id^=btn_save_]').trigger('click');
-				});
-			}
-
-			/**
-			 * Override default action for on/off buttons: ajax_constantonoff is designed to work with
-			 * conf, but if we are saving an account-specific conf, it should be saved as JSON in an extrafield
-			 * and not in llx_const.
-			 */
-			//if (window.jsonDataArray && window.jsonDataArray.accountId) {
-			//	console.log('jsonDataArray.accountId: ' , jsonDataArray.accountId);
-			//	// ensure other events get registered before we turn them off: setTimeout puts the call
-			//	// at the end of the call queue
-			//	setTimeout(function () {
-			//		$('form[id^=form_save_BANKSTATEMENT_]:visible > span[id^=set_BANKSTATEMENT_]').off('click');
-			//		$('form[id^=form_save_BANKSTATEMENT_]:visible > span[id^=del_BANKSTATEMENT_]').off('click');
-			//
-			//		let getConstSetter = function (value) {
-			//			return function (ev) {
-			//				let code = ev.target.parentElement.id.replace(/^(set|del)_/, '');
-			//				let url = window.location.origin + window.location.pathname;
-			//				let action = 'ajax_set_const';
-			//
-			//				$(ev.target.parentElement).hide();
-			//				$((value ? '#del_' : '#set_') + code).show();
-			//
-			//				$.get(
-			//					url,
-			//					{
-			//						accountId: window.jsonDataArray.accountId,
-			//						action: action,
-			//						name: code,
-			//						value: value
-			//					},
-			//					function (response) {
-			//						$.jnotify(_trans['ValueSaved']+ ' ' + _trans[code], 'mesgs');
-			//					}
-			//				);
-			//			};
-			//		}
-			//
-			//		// TODO: use a more reliable method without making assumptions DOM
-			//		// TODO: set the initial values for account-specific on/off values
-			//		$('form[id^=form_save_BANKSTATEMENT_]:visible > span[id^=set_BANKSTATEMENT_]').click(getConstSetter(true));
-			//		$('form[id^=form_save_BANKSTATEMENT_]:visible > span[id^=del_BANKSTATEMENT_]').click(getConstSetter(false));
-			//	}, 0);
-			//	//$('form[id^=form_save_BANKSTATEMENT_]:visible > span[id^=set_BANKSTATEMENT_], form[id^=form_save_BANKSTATEMENT_]:visible > span[id^=del_BANKSTATEMENT_]').off('click');
-			//}
-		});
+/**
+ * Saves all unsaved confs (except those not displayed).
+ *
+ * @param confPrefix
+ */
+window.saveAll = function (confPrefix) {
+	let toBeSaved = $('form[id^=form_save_' + confPrefix + ']:visible').filter(function(n, form) {
+		let confName = form.id.replace(/^form_save_/g, '');
+		return isUnsaved(confName);
+	});
+	if (toBeSaved.length === 0) {
+		$.jnotify(translate('NoValueToSave'), 'warning');
 	}
-)();
+	toBeSaved.each(function(n, form) {
+		/*
+		Note : we trigger a button click instead of a form submit
+		because form submit bypasses HTML5 validation: this would happily
+		disregard the "required", "pattern", etc. attributes.
+		*/
+		//$(form).trigger('submit');
+		$(form).find('button[id^=btn_save_]').trigger('click');
+	});
+}

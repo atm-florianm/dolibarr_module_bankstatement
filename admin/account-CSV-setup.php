@@ -109,7 +109,7 @@ if ($resLoad === -1) {
 		// TODO: handle error
 		var_dump('error: unable to load the default CSV format');
 	} else {
-		$CSVFormat->fk_account = $account->id;
+		$CSVFormat->fk_account = intval($account->id);
 	}
 } else {
 	// successfully loaded
@@ -122,7 +122,7 @@ foreach ($TConstParameter as $confName => $confParam) {
 	if ($confParam['inputtype'] === 'bool') {
 		$check = 'int';
 	}
-	if (!isset($_REQUEST[$confName])) {
+	if (!GETPOSTISSET(confName)) {
 		continue;
 	}
 	$nbValuesToSave++;
@@ -138,11 +138,13 @@ if ($nbValuesToSave) {
 	$CSVFormat->save($account->id);
 }
 
+setJSONDataArray(array('accountId' => $CSVFormat->fk_account));
 /*
  * Main View
  */
 $page_name = "BankStatementSetup";
 llxHeader('', $langs->trans($page_name));
+echo '<script type="application/javascript" src="' . dol_buildpath('/bankstatement/js/bankstatement_setup.js.php', 1) . '"></script>';
 
 //// Subheader
 //$linkback = '<a href="'.($backtopage?$backtopage:DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1').'">'.$langs->trans("BackToModuleList").'</a>';

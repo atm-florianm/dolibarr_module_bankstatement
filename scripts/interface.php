@@ -30,9 +30,16 @@ if ($get !== '' && $set !== '') {
 				GETPOST('value', 'alpha')
 			);
 			exit;
-		case '':
+		case 'bankstatementformatvalue':
+			_set_BankStatementFormat_value(
+				GETPOST('accountId', 'int'),
+				GETPOST('name', 'aZ09'),
+				GETPOST('value', 'alpha')
+			);
 	}
 }
+
+failureResponse('UnrecognizedQuery');
 
 /**
  * Prints a JSON failure response with a reason and exits.
@@ -148,12 +155,33 @@ function _get_pieceList($i, $fk_soc, $type) {
 }
 
 /**
+ * @param int $accountId
+ * @param string $name
+ * @param string $value
+ */
+function _set_BankStatementFormat_value($accountId, $name, $value) {
+	global $user, $db;
+	if (!$user->rights->bankstatement->write) {
+		failureResponse('Denied:AdminOnly');
+	}
+	dol_include_once('/bankstatement/class/bankstatementformat.class.php');
+	$CSVFormat = new BankStatementFormat($db);
+	$CSVFormat->load($accountId);
+	$CSVFormat->setFieldValue($name, $value, true);
+	if (!$CSVFormat->save()) {
+		failureResponse('UnableToSave');
+	}
+	successResponse();
+}
+
+/**
  * Set or delete (if $value is empty) a configuration row in llx_const
  * @param string $name
  * @param string $value
  */
 function _set_const($name, $value) {
 	global $conf, $user, $db;
+	dol_include_once('/core/lib/admin.lib.php');
 	// check that the user is admin
 	if (!$user->admin) {
 		// security: only admin can set const

@@ -86,7 +86,7 @@ function bankstatementAdminPrepareHead() {
  * @param string $varName   Name for the variable (defaults to 'window.jsonDataArray'). Use a different name
  *                          if you call the function more than once.
  */
-function setJavascriptVariables($dataArray, $varName = 'window.jsonDataArray') {
+function setJSONDataArray($dataArray, $varName = 'window.jsonDataArray') {
 	echo '<script type="application/javascript">' . "\n"
 		. $varName . '=' . json_encode($dataArray) . ";\n"
 		. "</script>\n";
@@ -176,14 +176,14 @@ function getConfInput($CSVFormat, $code, $parameters, $TAutoParameters = array()
 		'name="%s" id="%s" class="%s" data-saved-value="%s"',
 		htmlspecialchars($code, ENT_COMPAT),
 		htmlspecialchars($code, ENT_COMPAT),
-		htmlspecialchars($parameters['css'], ENT_COMPAT),
+		htmlspecialchars($parameters['css'] . ' ajaxSaveOnClick', ENT_COMPAT),
 		htmlspecialchars($confValue)
 	);
 	if (!empty($parameters['required'])) $inputAttrs .= ' required';
 	switch ($parameters['inputtype']) {
 		case 'bool':
 			// TODO : replace with a one-click toggler
-			$input = '<select id="' . $code . '" name="' . $code . '">'
+			$input = '<select ' . $inputAttrs . ' id="' . $code . '" name="' . $code . '">'
 					 . '<option value="0" ' . ((!$confValue) ? 'selected' : '') . '>' . $langs->trans('No') . '</option>'
 					 . '<option value="1" ' . (( $confValue) ? 'selected' : '') . '>' . $langs->trans('Yes') . '</option>'
 					 .'</select>';
@@ -208,7 +208,7 @@ function getConfInput($CSVFormat, $code, $parameters, $TAutoParameters = array()
 						 join("\n", $options),
 						 $code,
 						 $langs->trans('Modify')
-					 ) . '<script type="text/javascript">$(()=>ajaxSaveOnClick("'.htmlspecialchars($code, ENT_COMPAT).'"));</script>';
+					 );
 			break;
 		case 'text':
 			if (isset($parameters['suggestions'])) {
@@ -229,10 +229,10 @@ function getConfInput($CSVFormat, $code, $parameters, $TAutoParameters = array()
 			$input = sprintf(
 						 '<input %s type="text" value="%s" /> <button class="but" id="btn_save_%s">%s</button>',
 						 $inputAttrs,
-						 htmlspecialchars($confValue, ENT_COMPAT),
+						 htmlentities($confValue, ENT_COMPAT),
 						 $code,
 						 $langs->trans('Modify')
-					 ) . '<script type="text/javascript">$(()=>ajaxSaveOnClick("'.htmlspecialchars($code, ENT_COMPAT).'"));</script>';
+					 );
 			if (isset($datalist)) $input .= $datalist;
 			break;
 		default:
@@ -242,7 +242,7 @@ function getConfInput($CSVFormat, $code, $parameters, $TAutoParameters = array()
 	$TAutoParameters['action'] = $TAutoParameters['action'] ? $TAutoParameters['action'] : 'update';
 	$THiddenInput = array();
 	foreach ($TAutoParameters as $paramName => $value) {
-		$THiddenInput[] = '<input type="hidden" name="'. htmlspecialchars($paramName) .'" value="'. htmlspecialchars($value) .'" />';
+		$THiddenInput[] = '<input type="hidden" name="'. htmlspecialchars($paramName) .'" value="'. htmlentities($value) .'" />';
 	}
 	return '<form method="POST" id="form_save_' . $code . '" action="' . $_SERVER['PHP_SELF'] . '">'
 		   . '<div class="justify-content-between">'
