@@ -141,6 +141,8 @@ class BankStatementFormat
 	 */
 	public function parseCSVLine($csvLine)
 	{
+		$delimiter = $this->delimiter;
+		if ($delimiter === '\\t') $delimiter = "\t";
 		return str_getcsv($csvLine, $this->delimiter, $this->enclosure, $this->escapeChar);
 	}
 

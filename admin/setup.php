@@ -47,7 +47,7 @@ if (! $user->admin) accessforbidden();
 $separatorChoices = array(
 	'Comma'      => ',',
 	'Semicolon'  => ';',
-	'Tabulation' => "\t",
+	'Tabulation' => "\\t",
 	'Colon'      => ':',
 	'Pipe'       => '|',
 );
@@ -61,7 +61,7 @@ $lineSeparatorChoices = array(
 
 $TAdminFieldParameters=array(
 	'BANKSTATEMENT_COLUMN_MAPPING'                      => array('required' => 1, 'pattern' => '.*(?=.*\\bdate\\b)(?=.*\\blabel\\b)((?=.*\\bcredit\\b)(?=.*\\bdebit\\b)|(?=.*\\bamount\\b)).*'),
-	'BANKSTATEMENT_DELIMITER'                           => array('required' => 1, 'pattern' => '^.$', 'suggestions' => $separatorChoices,),
+	'BANKSTATEMENT_DELIMITER'                           => array('required' => 1, 'pattern' => '^(.|\\\\t)$', 'suggestions' => $separatorChoices,),
 	'BANKSTATEMENT_DATE_FORMAT'                         => array('required' => 1,),
 	'BANKSTATEMENT_USE_DIRECTION'                       => array('inputtype' => 'bool', 'required_by' => array('BANKSTATEMENT_DIRECTION_CREDIT', 'BANKSTATEMENT_DIRECTION_DEBIT'),),
 	'BANKSTATEMENT_DIRECTION_CREDIT'                    => array('depends' => 'BANKSTATEMENT_USE_DIRECTION',),
