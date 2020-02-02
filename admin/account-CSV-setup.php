@@ -107,6 +107,9 @@ if ($resLoad === -1) {
 	// load default values from $conf
 	if ($CSVFormat->load(0) < 0) {
 		// TODO: handle error
+		var_dump('error: unable to load the default CSV format');
+	} else {
+		$CSVFormat->fk_account = $account->id;
 	}
 } else {
 	// successfully loaded
