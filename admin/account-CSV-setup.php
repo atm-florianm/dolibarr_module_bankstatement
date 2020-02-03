@@ -122,7 +122,7 @@ foreach ($TConstParameter as $confName => $confParam) {
 	if ($confParam['inputtype'] === 'bool') {
 		$check = 'int';
 	}
-	if (!GETPOSTISSET(confName)) {
+	if (!GETPOSTISSET($confName)) {
 		continue;
 	}
 	$nbValuesToSave++;
