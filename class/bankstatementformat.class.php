@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-
+dol_include_once('/bankstatement/lib/bankstatement.lib.php');
 /**
  * \file        class/bankstatementformat.class.php
  * \ingroup     bankstatement
