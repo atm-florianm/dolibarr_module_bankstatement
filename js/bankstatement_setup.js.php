@@ -54,9 +54,9 @@ echo 'let _trans = ' . json_encode(
 		$langs->tab_translate,
 		array_flip(
 			array(
-				'valueSaved',
-				'valueUnchanged',
-				'noValueToSave',
+				'ValueSaved',
+				'ValueUnchanged',
+				'NoValueToSave',
 			)
 		)
 	)
@@ -121,7 +121,7 @@ window.ajaxSaveOnClick = function (code) {
 					}
 				);
 			} else {
-				$.jnotify(translate('valueUnchanged'), 'warning');
+				$.jnotify(translate('ValueUnchanged'), 'warning');
 				ev.preventDefault();
 				return;
 			}

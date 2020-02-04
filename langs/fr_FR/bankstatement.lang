@@ -40,7 +40,7 @@ LeftMenuBankStatement_create=<span title="Pour importer un relevé">Importer un 
 BankStatementSetup = Configuration du module Import de relevés de banque
 BankStatementSetupPage = Ici, vous pouvez configurer le module « Import de relevés de banque ». N’oubliez pas de sauvegarder chacune de vos modifications.
 ValueSaved=Option enregistrée :
-valueUnchanged=Option déjà enregistrée
+ValueUnchanged=Option déjà enregistrée
 NoValueToSave=Toutes les options sont déjà enregistrées
 Settings = Réglages par défaut
 AccountSettings = Compte "%s"
