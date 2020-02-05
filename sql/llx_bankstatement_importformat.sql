@@ -19,7 +19,7 @@ CREATE TABLE llx_bankstatement_importformat(
     columnmapping     varchar(255),
     delimiter         varchar(4),
     dateformat        varchar(32),
-    lineending        varchar(4),
+    lineending        varchar(24), -- allow for longer regexp
     escapechar        varchar(4),
     enclosure         varchar(4),
     skipfirstline     tinyint(4),
