@@ -67,7 +67,7 @@ $TConfigFieldParameters=array(
 	'BANKSTATEMENT_DIRECTION_CREDIT'                    => array('depends' => 'BANKSTATEMENT_USE_DIRECTION',),
 	'BANKSTATEMENT_DIRECTION_DEBIT'                     => array('depends' => 'BANKSTATEMENT_USE_DIRECTION',),
 	'BANKSTATEMENT_SKIP_FIRST_LINE'                              => array('inputtype' => 'bool',),
-//	'BANKSTATEMENT_LINE_ENDING'                      => array('inputtype' => 'select', 'options' => $lineSeparatorChoices,),
+//	'BANKSTATEMENT_LINE_ENDING'                         => array('inputtype' => 'select', 'options' => $lineSeparatorChoices,),
 //	'BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD'    => array('inputtype' => 'bool',),
 //	'BANKSTATEMENT_ALLOW_DRAFT_INVOICE'                 => array('inputtype' => 'bool',),
 //	'BANKSTATEMENT_UNCHECK_ALL_LINES'                   => array('inputtype' => 'bool',),
@@ -87,6 +87,7 @@ $accountId = GETPOST('accountid', 'int');
 
 if (empty($accountId)) {
 	// TODO: setEventMessages + redirect to homepage?
+	echo '<div>' . 'Error: accountid is empty' . '</div>';
 	exit;
 }
 

@@ -1,5 +1,5 @@
 date;label;debit;credit;comment
 2019-02-01;FA1901-0001 (partiel);;850;règlement partiel de facture client
-2019-02-15;FA1901-0001 (final) + FA1901-0002;;6500;règlement final des deux facture client
+2019-02-15;FA1901-0001 (final) + FA1901-0002;;6200;règlement final des deux facture client
 2019-02-18;SI1901-0001 (final);600;;règlement final de la facture fournisseur
 

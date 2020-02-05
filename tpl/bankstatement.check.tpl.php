@@ -100,7 +100,7 @@
 					$select_company = $form->select_company($fk_soc, $comboName,'',1,0,1);
 
 					echo '<br />';
-					echo $line->code_client.' <span onclick="$(\'#span_for_company_'.$i.'\').show(); $(this).hide();"><b>'.$name.'</b></span><span id="span_for_company_'.$i.'" style="display:none">'.$select_company.'</span>';
+					echo $line->code_client.' <span style="cursor: pointer;" onclick="$(\'#span_for_company_'.$i.'\').show(); $(this).hide();"><b>'.$name.'</b></span><span id="span_for_company_'.$i.'" style="display:none">'.$select_company.'</span>';
 					echo '&nbsp;<span class="fieldrequired">*</span><br />';
 					echo $form->select_types_paiements('', 'TLine[fk_payment]['.$i.']');
 					echo '&nbsp;<span class="fieldrequired">*</span>';

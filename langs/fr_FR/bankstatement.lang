@@ -139,3 +139,6 @@ ReconciliationDone=Actions effectuées : %d transactions rapprochées et %d éc
 BankStatementCompareTitle=Sélection des actions de rapprochement
 ErrorMoreThanOneAccountSelected=Erreur : les lignes sélectionnées appartiennent à plusieurs comptes. Veuillez sélectionner uniquement des lignes du même compte.
 BankStatementCreateFreeLine=Écriture bancaire libre
+
+BankTransactionWillBeCreatedAndReconciled=L’écriture sera créée et rapprochée sur le compte %s
+WillBeReconciledWithStatement=L’écriture sera rapprochée sur le compte %s

@@ -138,7 +138,6 @@ window.ajaxSaveOnClick = function (code) {
  * @param confName2
  */
 window.setVisibilityDependency = function (confName, confName2) {
-	console.log(confName, confName2);
 	let toggleShowInput = function() {
 		$('#' + confName2).closest('tr').toggleClass('hide_conf');
 	};
