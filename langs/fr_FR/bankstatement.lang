@@ -96,7 +96,7 @@ DefaultCSVFormatConf=Configurer le format d’import CSV par défaut
 # Account-specific setup
 CSVImportConf=Configurer import CSV
 AccountCSVFormatConf=Configurer le format d’import CSV spécifique du compte « %s »
-
+BankStatementAccountSetup=Configuration d’import par compte
 
 # Setup errors
 ErrorInputDoesNotMatchPattern=Non sauvegardé : votre saisie ne correspond pas au format attendu.

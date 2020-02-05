@@ -188,9 +188,9 @@ class TransactionCompare
 	}
 
 	/**
-	 * @param $amount
-	 * @param $label
-	 * @return array|bool
+	 * @param float $amount
+	 * @param string $label
+	 * @return array|bool  Array of llx_bank lines matching the searched amount (and, optionally, label).
 	 */
 	private function search_dolibarr_transaction_by_amount($amount, $label) {
 		global $conf, $langs;
@@ -199,9 +199,11 @@ class TransactionCompare
 		$amount = floatval($amount); // Transform to float
 		foreach($this->TBank as $i => $bankLine) {
 			$test = ($amount == $bankLine->amount);
-			if($conf->global->BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL) $test = ($amount == $bankLine->amount && $label == $bankLine->label);
+			if($conf->global->BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL) {
+				$test = ($amount == $bankLine->amount && $label == $bankLine->label);
+			}
 			if(!empty($test)) {
-				unset($this->TBank[$i]);
+				unset($this->TBank[$i]); // this dolibarr bank line is now assigned to the bankstatement line
 
 				return array($this->get_bankline_data($bankLine));
 			}

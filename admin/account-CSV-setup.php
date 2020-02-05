@@ -143,7 +143,7 @@ setJSONDataArray(array('accountId' => $CSVFormat->fk_account));
 /*
  * Main View
  */
-$page_name = "BankStatementSetup";
+$page_name = "BankStatementAccountSetup";
 llxHeader('', $langs->trans($page_name));
 echo '<script type="application/javascript" src="' . dol_buildpath('/bankstatement/js/bankstatement_setup.js.php', 1) . '"></script>';
 
