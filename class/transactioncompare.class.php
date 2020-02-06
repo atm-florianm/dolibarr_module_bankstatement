@@ -178,12 +178,9 @@ class TransactionCompare
 
 		// For each file transaction, we search in Dolibarr bank transaction if there is a match by amount
 		foreach($this->TImportedLines as &$importedLine) {
-			$amount = price2num($importedLine->amount); // Transform to numeric string
-			if(is_numeric($amount)) {
-				$transac = $this->search_dolibarr_transaction_by_amount($amount, $importedLine->label);
-				if($transac === false) $transac = $this->search_dolibarr_transaction_by_receipt($amount);
-				$importedLine->bankline = $transac;
-			}
+			$transac = $this->search_dolibarr_transaction_by_amount($importedLine);
+			if($transac === false) $transac = $this->search_dolibarr_transaction_by_receipt($importedLine);
+			$importedLine->bankline = $transac;
 		}
 	}
 
@@ -192,18 +189,19 @@ class TransactionCompare
 	 * @param string $label
 	 * @return array|bool  Array of llx_bank lines matching the searched amount (and, optionally, label).
 	 */
-	private function search_dolibarr_transaction_by_amount($amount, $label) {
+	private function search_dolibarr_transaction_by_amount($importedLine) {
 		global $conf, $langs;
 		$langs->load("banks");
-
-		$amount = floatval($amount); // Transform to float
+		// [FM] : est-ce que ça a un sens de faire floatval(price2num(<float>)) ?
+		$amount = floatval(price2num($importedLine->amount)); // Transform to numeric string
 		foreach($this->TBank as $i => $bankLine) {
 			$test = ($amount == $bankLine->amount);
 			if($conf->global->BANKSTATEMENT_MATCH_BANKLINES_BY_AMOUNT_AND_LABEL) {
-				$test = ($amount == $bankLine->amount && $label == $bankLine->label);
+				$test = ($test && $importedLine->label == $bankLine->label);
 			}
 			if(!empty($test)) {
-				unset($this->TBank[$i]); // this dolibarr bank line is now assigned to the bankstatement line
+				// unset because this dolibarr bank line is now assigned to the bankstatement line
+				unset($this->TBank[$i]);
 
 				return array($this->get_bankline_data($bankLine));
 			}
@@ -216,11 +214,11 @@ class TransactionCompare
 	 * @param $amount
 	 * @return array|bool
 	 */
-	private function search_dolibarr_transaction_by_receipt($amount) {
+	private function search_dolibarr_transaction_by_receipt($importedLine) {
 		global $langs;
 		$langs->load("banks");
-
-		$amount = floatval($amount); // Transform to float
+		// [FM] : est-ce que ça a un sens de faire floatval(price2num(<float>)) ?
+		$amount = floatval(price2num($importedLine->amount)); // Transform to numeric string
 		foreach($this->TCheckReceipt as $bordereau) {
 			if($amount == $bordereau->amount) {
 				$TBankLine = array();
@@ -250,8 +248,8 @@ class TransactionCompare
 			$link = '<a href="' . dol_buildpath(
 					'/compta/bank/releve.php'
 					. '?num=' . $bankLine->num_releve
-					. '&account=' . $bankLine->fk_account, 2
-				) . '">'
+					. '&account=' . $bankLine->fk_account, 2)
+					. '">'
 					. $bankLine->num_releve
 					. '</a>';
 			$result = $langs->trans('AlreadyReconciledWithStatement', $link);
