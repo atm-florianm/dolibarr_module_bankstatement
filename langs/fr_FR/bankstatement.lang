@@ -142,3 +142,10 @@ BankStatementCreateFreeLine=Écriture bancaire libre
 
 BankTransactionWillBeCreatedAndReconciled=L’écriture sera créée et rapprochée sur le compte %s
 WillBeReconciledWithStatement=L’écriture sera rapprochée sur le compte %s
+BankStatement_selectCompanyPls=Sélectionnez un tiers
+BankStatement_selectPaymentTypePls=Sélectionnez un moyen de paiement
+ClickToSelectACustomer=Cliquez pour sélectionner un client
+ClickToSelectADifferentCustomer=Cliquez pour sélectionner un autre client
+BankStatementFieldCompanyRequired=Le champ « tiers » est obligatoire.
+BankStatementFieldPaymentRequired=Le champ « moyen de paiement » est obligatoire.
+AlreadyReconciledWithStatement=Déjà rapproché

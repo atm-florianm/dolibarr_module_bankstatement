@@ -90,11 +90,11 @@
 							WHERE code_compta='".$db->escape($line->code_client)."' OR code_compta_fournisseur='".$db->escape($line->code_client)."'
 							LIMIT 1");
 					$fk_soc = 0;
-					$name = $langs->trans('bankstatement_no_customer_selected_click_to_select_one');
+					$name = $langs->trans('ClickToSelectACustomer');
 					if($obj_soc = $db->fetch_object($res))
 					{
 						$fk_soc = $obj_soc->rowid;
-						$name = $langs->trans('bankstatement_customer_selected_click_to_select_another_one', $obj_soc->nom);
+						$name = $langs->trans('ClickToSelectADifferentCustomer', $obj_soc->nom);
 					}
 
 					$select_company = $form->select_company($fk_soc, $comboName,'',1,0,1);
