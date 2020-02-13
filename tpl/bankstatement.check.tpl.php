@@ -10,7 +10,7 @@
 	<input type="hidden" name="action" value="apply_reconciliation" />
 	<table id="bankstatement_line_to_import" class="border" width="100%">
 		<tr class="liste_titre">
-			<td colspan="4" width="40%"><?php echo $langs->trans("FileTransactions") ?></td>
+			<td colspan="4" width="40%"><?php echo $langs->trans("ImportedTransactions") ?></td>
 			<td colspan="7" width="60%"><?php echo $langs->trans("DolibarrTransactions") ?></td>
 		</tr>
 		<tr class="liste_titre">

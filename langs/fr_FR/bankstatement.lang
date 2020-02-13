@@ -149,3 +149,5 @@ ClickToSelectADifferentCustomer=Cliquez pour sélectionner un autre client
 BankStatementFieldCompanyRequired=Le champ « tiers » est obligatoire.
 BankStatementFieldPaymentRequired=Le champ « moyen de paiement » est obligatoire.
 AlreadyReconciledWithStatement=Déjà rapproché
+ImportedTransactions = Transactions bancaires importées
+DolibarrTransactions = Écritures bancaires existantes dans Dolibarr
