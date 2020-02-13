@@ -28,10 +28,6 @@ ModuleBankStatementDesc = BankStatement description
 BankStatementSetup = BankStatement setup
 Settings = Settings
 BankStatementSetupPage = BankStatement setup page
-BANKSTATEMENT_MYPARAM1 = My param 1
-BANKSTATEMENT_MYPARAM1Tooltip = My param 1 tooltip
-BANKSTATEMENT_MYPARAM2=My param 2
-BANKSTATEMENT_MYPARAM2Tooltip=My param 2 tooltip
 
 
 #

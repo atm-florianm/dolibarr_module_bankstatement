@@ -48,17 +48,18 @@ $langs->load('bankstatement@bankstatement');
 
 
 // including all translations is maybe a bit too heavy.
-
+$translationsForJavascript = array(
+	'ValueSaved',
+	'ValueUnchanged',
+	'NoValueToSave',
+);
+foreach ($langs->tab_translate as $key => $value) {
+	if (preg_match('/^BANKSTATEMENT_/', $key)) $translationsForJavascript[] = $key;
+}
 echo 'let _trans = ' . json_encode(
 	array_intersect_key(
 		$langs->tab_translate,
-		array_flip(
-			array(
-				'ValueSaved',
-				'ValueUnchanged',
-				'NoValueToSave',
-			)
-		)
+		array_flip($translationsForJavascript)
 	)
 ) . ';';
 ?>

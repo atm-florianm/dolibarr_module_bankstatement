@@ -60,15 +60,6 @@ $lineSeparatorChoices = array(
 );
 
 $TAdminFieldParameters=array(
-	'BANKSTATEMENT_COLUMN_MAPPING'                      => array('required' => 1, 'pattern' => '.*(?=.*\\bdate\\b)(?=.*\\blabel\\b)((?=.*\\bcredit\\b)(?=.*\\bdebit\\b)|(?=.*\\bamount\\b)).*'),
-	'BANKSTATEMENT_DELIMITER'                           => array('required' => 1, 'pattern' => '^(.|\\\\t)$', 'suggestions' => $separatorChoices,),
-	'BANKSTATEMENT_DATE_FORMAT'                         => array('required' => 1,),
-	'BANKSTATEMENT_USE_DIRECTION'                       => array('inputtype' => 'bool', 'required_by' => array('BANKSTATEMENT_DIRECTION_CREDIT', 'BANKSTATEMENT_DIRECTION_DEBIT'),),
-	'BANKSTATEMENT_DIRECTION_CREDIT'                    => array('depends' => 'BANKSTATEMENT_USE_DIRECTION',),
-	'BANKSTATEMENT_DIRECTION_DEBIT'                     => array('depends' => 'BANKSTATEMENT_USE_DIRECTION',),
-	'BANKSTATEMENT_HEADER'                              => array('inputtype' => 'bool',),
-	//	'BANKSTATEMENT_LINE_SEPARATOR'                      => array('inputtype' => 'select', 'options' => $lineSeparatorChoices,),
-	//	'BANKSTATEMENT_HISTORY_IMPORT'                      => array('inputtype' => 'bool',),
 	'BANKSTATEMENT_ALLOW_INVOICE_FROM_SEVERAL_THIRD'    => array('inputtype' => 'bool',),
 	'BANKSTATEMENT_ALLOW_DRAFT_INVOICE'                 => array('inputtype' => 'bool',),
 	'BANKSTATEMENT_UNCHECK_ALL_LINES'                   => array('inputtype' => 'bool',),
