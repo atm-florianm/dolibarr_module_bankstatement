@@ -37,7 +37,7 @@ class TransactionCompare
 	}
 
 	/**
-	 * @param $accountId
+	 * @param int $accountId
 	 * @return bool
 	 */
 	function fetchAccount($accountId)
@@ -50,6 +50,7 @@ class TransactionCompare
 		} else {
 			$this->account = new Account($this->db);
 			$this->account->fetch($accountId);
+			return True;
 		}
 	}
 
@@ -124,7 +125,6 @@ class TransactionCompare
 	 */
 	function load_imported_transactions($TBankstatementLineId = array())
 	{
-		global $conf, $langs;
 		$earliestDate = null;
 		$latestDate = null;
 		$TError = array();
@@ -185,8 +185,7 @@ class TransactionCompare
 	}
 
 	/**
-	 * @param float $amount
-	 * @param string $label
+	 * @param BankStatementLine $importedLine
 	 * @return array|bool  Array of llx_bank lines matching the searched amount (and, optionally, label).
 	 */
 	private function search_dolibarr_transaction_by_amount($importedLine) {
@@ -211,7 +210,7 @@ class TransactionCompare
 	}
 
 	/**
-	 * @param $amount
+	 * @param BankStatementLine $importedLine
 	 * @return array|bool
 	 */
 	private function search_dolibarr_transaction_by_receipt($importedLine) {
@@ -238,7 +237,7 @@ class TransactionCompare
 	}
 
 	/**
-	 * @param $bankLine
+	 * @param AccountLine $bankLine
 	 * @return array
 	 */
 	private function get_bankline_data($bankLine) {
@@ -255,7 +254,7 @@ class TransactionCompare
 			$result = $langs->trans('AlreadyReconciledWithStatement', $link);
 			$autoaction = false;
 		} else {
-			$result = $langs->trans('WillBeReconciledWithStatement', $this->numReleve);
+			$result = $langs->trans('WillBeReconciledWithStatement', ''); /* TODO: fix this or fix translation */
 			$autoaction = true;
 		}
 
@@ -408,11 +407,12 @@ class TransactionCompare
 
 		dol_include_once('/compta/facture/class/facture.class.php');
 		dol_include_once('/fourn/class/fournisseur.facture.class.php');
-
+		
 		$TTypeElement = array('payment'=>'Facture', 'payment_supplier'=>'FactureFournisseur');
-
+		
 		if(!empty($TAmounts) && in_array($type, array_keys($TTypeElement))) {
 			foreach($TAmounts as $facid=>$amount) {
+				/** @var CommonObject $f */
 				$f = new $TTypeElement[$type]($db);
 				if($f->fetch($facid) > 0 && $f->statut == 0 && $amount > 0) $f->validate($user);
 			}
@@ -442,7 +442,7 @@ class TransactionCompare
 	 *                         them partially) with one payment; then we need to break down the total amount in order
 	 *                         assign an amount to each invoice
 	 * @param $l_societe
-	 * @param BankStatementLine $importedLine
+	 * @param int $iImportedLine  Array index of BankStatementLine in $this->TImportedLines
 	 * @param $fk_payment
 	 * @param $date_paye
 	 * @param string $type
@@ -506,7 +506,7 @@ class TransactionCompare
 	private function createDiscount(&$TAmounts)
 	{
 
-		global $db, $user;
+		global $db, $user, $langs;
 
 		dol_include_once('/core/class/discount.class.php');
 
@@ -531,6 +531,9 @@ class TransactionCompare
 
 				// Boucle sur chaque taux de tva
 				$i = 0;
+				$amount_ht = array();
+				$amount_tva = array();
+				$amount_ttc = array();
 				foreach ($object->lines as $line) {
 					$amount_ht [$line->tva_tx] += $line->total_ht;
 					$amount_tva [$line->tva_tx] += $line->total_tva;
@@ -618,7 +621,7 @@ class TransactionCompare
 	 * @param BankStatementLine $importedLine An bank statement transaction imported with BankStatement
 	 */
 	private function reconcile_bank_transaction($bankLine, $importedLine) {
-		global $user,$conf;
+		global $user;
 
 		// Set conciliation
 		$bankStatement = $importedLine->getStatement();

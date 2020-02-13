@@ -87,6 +87,9 @@ class BankStatementLine extends CommonObject
 
 	/** @var Translate $langs */
 	public $langs;
+	
+	/** @var AccountLine $bankline  For reconciliation */
+	public $bankline;
 
 	public function __construct(DoliDB $db)
 	{
