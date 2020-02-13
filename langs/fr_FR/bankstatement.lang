@@ -32,7 +32,7 @@ BankStatementLigne=Ligne de relevé
 TransactionDate=Date de la transaction
 
 # Menus
-LeftMenuBankStatement_overview=Transactions importées
+LeftMenuBankStatement_overview=Opérations importées
 LeftMenuBankStatement_list=Liste des relevés
 LeftMenuBankStatement_create=<span title="Pour importer un relevé">Importer un relevé</span>
 
