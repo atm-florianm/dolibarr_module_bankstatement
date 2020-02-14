@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-
+exit;
 // Load Dolibarr environment
 $mainIncludePath = '../../main.inc.php';
 $MAX_BACKTRACK=5; // max depth for finding 'main.inc.php' in parent directories
@@ -65,7 +65,8 @@ if ($actionApplyConciliation) {
 	$TTransactions = $transactionCompare->TImportedLines;
 }
 
-llxHeader('', $langs->trans('TitleBankCompare'));
+$title = $langs->trans('TitleBankCompare');
+llxHeader('', $title, '', '', 0, 0, array(), array('/bankstatement/css/bankstatement.css.php'));
 print_fiche_titre($langs->trans("TitleBankCompare"));
 
 include 'tpl/bankstatement.common.tpl.php';

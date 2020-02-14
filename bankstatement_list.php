@@ -222,6 +222,7 @@ $form = new Form($db);
 
 $now = dol_now();
 
+// TODO: créer la page sur le wiki et restaurer le lien vers l’aide.
 //$help_url="EN:Module_BankStatement|FR:Module_BankStatement_FR|ES:Módulo_BankStatement";
 $help_url = '';
 
@@ -323,7 +324,7 @@ if ($num == 1 && !empty($conf->global->MAIN_SEARCH_DIRECT_OPEN_IF_ONLY_ONE) && $
 // Output page
 // --------------------------------------------------------------------
 
-llxHeader('', $title, $help_url);
+llxHeader('', $title, $help_url, '', 0, 0, array(), array('/bankstatement/css/bankstatement.css.php'));
 
 // Example : Adding jquery code
 print '<script type="text/javascript" language="javascript">

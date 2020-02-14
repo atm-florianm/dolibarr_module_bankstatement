@@ -90,8 +90,8 @@ class modBankStatement extends DolibarrModules
 			'tpl'           => 0,                               // Set this to 1 if module overwrite template dir (core/tpl)
 			'barcode'       => 0,                               // Set this to 1 if module has its own barcode directory (core/modules/barcode)
 			'models'        => 0,                               // Set this to 1 if module has its own models directory (core/modules/xxx)
-			'css' => array('/bankstatement/css/bankstatement.css.php'),	// Set this to relative path of css file if module has its own css file
-			'js'  => array('/bankstatement/js/bankstatement.js.php'),   // Set this to relative path of js file if module must load a js on all pages
+			'css' => array(),                                   // Set this to relative path of css file if module has its own css file
+			'js'  => array(),                                   // Set this to relative path of js file if module must load a js on all pages
 			'hooks' => array('bankcard'),                               // Set here all hooks context managed by module. To find available hook context, make a "grep -r '>initHooks(' *" on source code. You can also set hook context 'all'
 			'moduleforexternal' => 0                            // Set this to 1 if feature of module are opened to external users
 		);

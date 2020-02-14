@@ -144,9 +144,9 @@ function normalizeConfigFieldParams($TConfigFieldParams) {
 }
 
 /**
- * @param $confName
- * @param $parameters
- * @param $form
+ * @param string $confName
+ * @param array $parameters
+ * @param Form  $form
  * @return string
  */
 function getConfLabel($confName, $parameters, $form) {
@@ -306,9 +306,8 @@ function printCSVFormatEditor($db, $CSVFormat, $TConstParameter, $title) {
 		?>
 		<tr class="jsRequired">
 			<td>
-				<!--			<noscript><style> .jsRequired { display: none } </style></noscript>-->
-				<!-- TODO: rewrite ajax saving functions, then restore the "save all" button which uses javascript -->
-				<style> .jsRequired { display: none } </style>
+							<noscript><style> .jsRequired { display: none } </style></noscript>
+<!--				<style> .jsRequired { display: none } </style>-->
 			</td>
 			<td>
 				<button onclick="saveAll('BANKSTATEMENT_')" class="button jsRequired"><?php echo $langs->trans('SaveAll');?></button>

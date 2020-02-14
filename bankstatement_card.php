@@ -175,7 +175,7 @@ if (empty($reshook))
 $form = new Form($db);
 $formfile = new FormFile($db);
 
-llxHeader('', $langs->trans('BankStatement'), '');
+llxHeader('', $langs->trans('BankStatement'), '', '', 0, 0, array(), array('/bankstatement/css/bankstatement.css.php'));
 
 function show_form_create($conf, $langs, $hookmanager, $object, $backtopage, $backtopageforcancel) {
 	print load_fiche_titre($langs->trans("NewObject", $langs->transnoentitiesnoconv("BankStatement")));
