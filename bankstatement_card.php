@@ -266,7 +266,8 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 	$res = $object->fetch_optionals();
 
 	$head = bankstatementPrepareHead($object);
-	dol_fiche_head($head, 'card', $langs->trans("BankStatement"), -1, $object->picto);
+	$activeTabName = ($action === 'reconcileTransactions' || $action === 'apply_reconciliation') ? 'reconcile' : 'card';
+	dol_fiche_head($head, $activeTabName, $langs->trans("BankStatement"), -1, $object->picto);
 
 	// show confirmation pop-in for certain actions
 	$actionsRequiringConfirmation = array('delete', 'deleteline');
@@ -354,6 +355,17 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 		// Show object lines
 		$result = $object->getLinesArray();
 
+		if ($action === 'reconcileTransactions' || $action === 'apply_reconciliation') {
+			$TLineId = array();
+			foreach ($object->lines as $line) {
+				/** @var BankStatementLine $line */
+				if ($line->status === $line::STATUS_UNRECONCILED) {
+					$TLineId[] = $line->id;
+				}
+			}
+			printReconciliationTable($db, $langs, $TLineId,true);
+		}
+
 		print '	<form name="addproduct" id="addproduct" action="'.$_SERVER["PHP_SELF"].'?id='.$object->id.(($action != 'editline') ? '#addline' : '#line_'.GETPOST('lineid', 'int')).'" method="POST">
 		<input type="hidden" name="token" value="' . $_SESSION ['newtoken'].'">
 		<input type="hidden" name="action" value="' . (($action != 'editline') ? 'addline' : 'updateline').'">
@@ -373,6 +385,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 
 		if (!empty($object->lines))
 		{
+			/** @var Societe $mysoc */
 			$object->printObjectLines($action, $mysoc, null, GETPOST('lineid', 'int'), 1);
 		}
 
@@ -459,10 +472,6 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 	*/
 }
 
-
-// share account select form with javascript
-//jsValuesAsJSON(array());
-//echo '<script type="application/javascript" src="js/bankstatement_card.js.php"></script>'."\n";
 
 // End of page
 llxFooter();

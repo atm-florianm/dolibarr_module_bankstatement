@@ -47,36 +47,7 @@ function bankstatementAdminPrepareHead() {
 	$head[$h][2] = 'default';
 	$h++;
 
-//	$sql = "SELECT DISTINCT account.rowid, account.label FROM ".MAIN_DB_PREFIX."bank_account as account"
-//	     . " WHERE account.entity IN (" . getEntity('bank_account') . ")"
-//	     . " ORDER BY account.rowid";
-//
-//	$resql = $db->query($sql);
-//
-//	if (!$resql) {
-//		setEventMessages("Error ".$db->lasterror(), array(), 'errors');
-//		return array();
-//	}
-//	$nbAccounts = $db->num_rows($resql);
-//
-//	for ($i = 0; $i < $nbAccounts; $i++, $h++) {
-//		$obj = $db->fetch_object($resql);
-//		if (empty($obj)) break;
-//		$head[$h][0] = dol_buildpath("/bankstatement/admin/setup.php?accountId=" . $obj->rowid, 1);
-//		$head[$h][1] = $langs->trans("AccountSettings", $obj->label);
-//		$head[$h][2] = 'account' . $obj->rowid;
-//	}
-
-
-	// Show more tabs from modules
-	// Entries must be declared in modules descriptor with line
-	//$this->tabs = array(
-	//	'entity:+tabname:Title:@bankstatement:/bankstatement/mypage.php?id=__ID__'
-	//); // to add new tab
-	//$this->tabs = array(
-	//	'entity:-tabname:Title:@bankstatement:/bankstatement/mypage.php?id=__ID__'
-	//); // to remove a tab
-	complete_head_from_modules($conf, $langs, $object, $head, $h, 'bankstatement');
+	complete_head_from_modules($conf, $langs, null, $head, $h, 'bankstatement');
 
 	return $head;
 }
@@ -316,4 +287,65 @@ function printCSVFormatEditor($db, $CSVFormat, $TConstParameter, $title) {
 		</tbody>
 	</table>
 	<?php
+}
+	
+/**
+ * @param DoliDB    $db
+ * @param Translate $langs
+ * @param int[]     $TLineId  IDs of BankStatementLine objects to be selected for reconciliation checking.
+ * @param bool      $included  If true, will not print llxHeader and llxFooter.
+ */
+function printReconciliationTable($db, $langs, $TLineId = array(), $included = False) {
+	global $conf;
+	require_once DOL_DOCUMENT_ROOT . '/compta/paiement/cheque/class/remisecheque.class.php';
+	require_once DOL_DOCUMENT_ROOT . '/user/class/user.class.php';
+	require_once DOL_DOCUMENT_ROOT . '/adherents/class/adherent.class.php';
+	require_once DOL_DOCUMENT_ROOT . '/compta/sociales/class/chargesociales.class.php';
+	dol_include_once('/bankstatement/class/transactioncompare.class.php');
+	
+	if (empty($TLineId) && GETPOSTISSET('toselect'))
+		$TLineId = array_map('intval', GETPOST('toselect', 'array'));
+	$actionApplyConciliation = !empty(GETPOST('applyConciliation'));
+	
+	$sqlCheckIdsHaveSameAccount = 'SELECT COUNT(DISTINCT fk_account) as nb_accounts, fk_account FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatementdet line'
+	                            . ' INNER JOIN ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement statement ON line.fk_bankstatement = statement.rowid'
+	                            . ' WHERE line.rowid IN (' . join(',', $TLineId) . ')';
+	$resql = $db->query($sqlCheckIdsHaveSameAccount);
+	$obj = $db->fetch_object($resql);
+	$nbAccounts = intval($obj->nb_accounts);
+	$accountId = intval($obj->fk_account);
+	if ($nbAccounts !== 1) {
+		// TODO: handle error
+		setEventMessages($langs->trans('ErrorMoreThanOneAccountSelected'), array(), 'errors');
+	} else {
+		$tplCommon = dol_buildpath('/bankstatement/tpl/bankstatement.' . 'common' . '.tpl.php', 0);
+		$tplCheck  = dol_buildpath('/bankstatement/tpl/bankstatement.' . 'check'  . '.tpl.php', 0);
+		$tplEnd    = dol_buildpath('/bankstatement/tpl/bankstatement.' . 'end'    . '.tpl.php', 0);
+		$transactionCompare = new TransactionCompare($db);
+		$transactionCompare->fetchAccount($accountId);
+		$transactionCompare->load_transactions($TLineId);
+		
+		if ($actionApplyConciliation) {
+			$tpl = $tplEnd;
+			$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
+			$transactionCompare->applyConciliation(GETPOST('TLine', 'array'));
+		} else {
+			$tpl = $tplCheck;
+			$transactionCompare->compare_transactions();
+			$TTransactions = $transactionCompare->TImportedLines; // Inspection says 'unused' but used in included template
+		}
+		
+		$title = $langs->trans('BankStatementCompareTitle');
+		if (!$included) {
+			llxHeader('', $title, '', '', 0, 0, array(), array('/bankstatement/css/bankstatement.css.php'));
+		}
+		print_fiche_titre($langs->trans("BankStatementCompareTitle"));
+		
+		include $tplCommon;
+		include $tpl;
+		if (!$included) {
+			llxFooter();
+			exit;
+		}
+	}
 }

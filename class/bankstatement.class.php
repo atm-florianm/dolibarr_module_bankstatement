@@ -777,12 +777,16 @@ class BankStatement extends CommonObject
 	{
 		$this->lines = array();
 
-		$objectline = new BankStatementLine($this->db, $this->CSVFormat);
-		$result = $objectline->fetchAll('ASC', 'date', 0, 0, array('customsql'=>'fk_bankstatement = '.$this->id));
+		$objectline = new BankStatementLine($this->db);
+		$result = $objectline->fetchAll(
+			'ASC',
+			'date',
+			0,
+			0,
+			array('customsql' => 'fk_bankstatement = '.$this->id)
+		);
 
 		if (is_numeric($result)) {
-//			$this->error = $this->error;
-//			$this->errors = $this->errors;
 			return $result;
 		} else {
 			$this->lines = $result;

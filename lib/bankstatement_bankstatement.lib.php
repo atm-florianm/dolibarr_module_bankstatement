@@ -22,10 +22,10 @@
  */
 
 /**
- * Prepare array of tabs for BankStatement
+ * Prepare array of tabs for BankStatement card
  *
- * @param	BankStatement	$object		BankStatement
- * @return 	array					Array of tabs
+ * @param	BankStatement	$object	BankStatement
+ * @return 	array Array of arrays (each array represents a tab; array indices matter)
  */
 function bankstatementPrepareHead($object)
 {
@@ -66,9 +66,16 @@ function bankstatementPrepareHead($object)
 //	$h++;
 
 	if ($object->status !== $object::STATUS_RECONCILED) {
-		$head[$h][0] = dol_buildpath("/bankstatement/bankstatement_reconcile.php", 1).'?id='.$object->id;
-		$head[$h][1] = $langs->trans("Reconcile");
-		$head[$h][2] = 'reconcile'; // => <a id="reconcile" […]></a>
+		$reconcileUrlQueryParams = array(
+			'id' => $object->id,
+			'action' => 'reconcileTransactions'
+		);
+		$reconcileUrl = dol_buildpath("/bankstatement/bankstatement_card.php", 1) . '?' . http_build_query($reconcileUrlQueryParams);
+		$head[$h] = array(
+			$reconcileUrl,
+			$langs->trans("Reconcile"),
+			'reconcile' // → <a id="reconcile" […]></a>
+		);
 		$h++;
 	}
 

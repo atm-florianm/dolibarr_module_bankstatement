@@ -1,11 +1,22 @@
-<form method="post" name="bankstatement" action="bankstatement_reconcile.php">
+<?php
+	/**
+	 * Variables initialized outside the scope of static (initialized in the files that include this template):
+	 * @var TransactionCompare $transactionCompare
+	 * @var int[]              $TLineId
+	 */
+?>
+<form method="post" name="bankstatement" action="<?php echo $_SERVER['PHP_SELF']; ?>">
 	<input type="hidden" name="accountid" value="<?php echo $transactionCompare->account->id ?>" />
 	<input type="hidden" name="datestart" value="<?php echo $transactionCompare->dateStart ?>" />
 	<input type="hidden" name="dateend" value="<?php echo $transactionCompare->dateEnd ?>" />
 	<?php
-	foreach ($TLineId as $k => $id) {
-		echo '<input type="hidden" name="TLineId['.$k.']" value="'.$id.'" />';
-	}
+		if (!empty(GETPOST('id', 'int'))) {
+			echo '<input type="hidden" name="id" value="' . intval(GETPOST('id', 'int')) . '" />';
+		}
+		$form = new Form($db);
+		foreach ($TLineId as $k => $id) {
+			echo '<input type="hidden" name="toselect['.$k.']" value="'.$id.'" />';
+		}
 	?>
 	<input type="hidden" name="action" value="apply_reconciliation" />
 	<table id="bankstatement_line_to_import" class="border" width="100%">

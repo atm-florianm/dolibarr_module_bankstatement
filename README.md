@@ -10,7 +10,8 @@ Other modules are available on [Dolistore.com](https://www.dolistore.com).
 ### Translations
 It is currently available in French and English. 
 
-Translations can be define manually by editing files into directories *langs*. 
+You can add or edit your own language files in your language's subdirectory of the
+*langs* directory. 
 
 Licenses
 --------

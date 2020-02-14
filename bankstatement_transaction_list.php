@@ -238,54 +238,8 @@ if (empty($reshook))
 
 	// Reconciliation / comparison
 	if ($massaction === 'reconcile') {
-		require_once DOL_DOCUMENT_ROOT . '/compta/paiement/cheque/class/remisecheque.class.php';
-		require_once DOL_DOCUMENT_ROOT . '/user/class/user.class.php';
-		require_once DOL_DOCUMENT_ROOT . '/adherents/class/adherent.class.php';
-		require_once DOL_DOCUMENT_ROOT . '/compta/sociales/class/chargesociales.class.php';
-		dol_include_once('/bankstatement/class/transactioncompare.class.php');
-
 		$TLineId = array_map('intval', GETPOST('toselect', 'array'));
-		$actionApplyConciliation = !empty(GETPOST('applyConciliation'));
-
-		$sqlCheckIdsHaveSameAccount='SELECT COUNT(DISTINCT fk_account) as nb_accounts, fk_account FROM ' . MAIN_DB_PREFIX . 'bankstatement_bankstatementdet line'
-									. ' INNER JOIN ' . MAIN_DB_PREFIX . 'bankstatement_bankstatement statement ON line.fk_bankstatement = statement.rowid'
-									. ' WHERE line.rowid IN (' . join(',', $TLineId) . ')';
-		$resql = $db->query($sqlCheckIdsHaveSameAccount);
-		$obj = $db->fetch_object($resql);
-		$nbAccounts = intval($obj->nb_accounts);
-		$accountId = intval($obj->fk_account);
-		if ($nbAccounts !== 1) {
-			// TODO: handle error
-			setEventMessages($langs->trans('ErrorMoreThanOneAccountSelected'), array(), 'errors');
-		} else {
-			$transactionCompare = new TransactionCompare($db);
-			$form = new Form($db);
-			$transactionCompare->fetchAccount($accountId);
-			$transactionCompare->load_transactions($TLineId);
-
-			if ($actionApplyConciliation) {
-				$tpl = 'tpl/bankstatement.end.tpl.php';
-				$transactionCompare->setStartAndEndDate(GETPOST('datestart'), GETPOST('dateend'));
-				//	$transactionCompare->load_imported_transactions($TLineId);
-				//	$transactionCompare->load_bank_transactions()
-				$transactionCompare->applyConciliation(GETPOST('TLine', 'array'));
-			} else {
-				$tpl = 'tpl/bankstatement.check.tpl.php';
-				//	$transactionCompare->load_transactions($TLineId);
-				$transactionCompare->compare_transactions();
-				$TTransactions = $transactionCompare->TImportedLines;
-			}
-			
-			$title = $langs->trans('BankStatementCompareTitle');
-			llxHeader('', $title, '', '', 0, 0, array(), array('/bankstatement/css/bankstatement.css.php'));
-			print_fiche_titre($langs->trans("BankStatementCompareTitle"));
-
-			include 'tpl/bankstatement.common.tpl.php';
-			include $tpl;
-			llxFooter();
-			exit;
-		}
-
+		printReconciliationTable($db, $langs, $TLineId, false);
 	}
 }
 
