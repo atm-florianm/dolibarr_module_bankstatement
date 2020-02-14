@@ -152,12 +152,12 @@ class modBankStatement extends DolibarrModules
 		$this->rights = array();    // Permission array used by this module
 
 		$r=0;
-		$this->rights[$r][0] = $this->numero + $r;                 // Permission id (must not be already used);
+		$this->rights[$r][0] = $this->numero . $r;                 // Permission id (must not be already used);
 		$this->rights[$r][1] = 'ReadBankStatements';               // Permission label
 		$this->rights[$r][3] = 0;                                  // Permission by default for new user (0/1)
 		$this->rights[$r][4] = 'read';                             // In php code, permission will be checked by test if ($user->rights->bankstatement->level1->level2)
 		$r++;
-		$this->rights[$r][0] = $this->numero + $r;                 // Permission id (must not be already used);
+		$this->rights[$r][0] = $this->numero . $r;                 // Permission id (must not be already used);
 		$this->rights[$r][1] = 'WriteBankStatements';              // Permission label
 		$this->rights[$r][3] = 0;                                  // Permission by default for new user (0/1)
 		$this->rights[$r][4] = 'write';                            // In php code, permission will be checked by test if ($user->rights->bankstatement->level1->level2)
