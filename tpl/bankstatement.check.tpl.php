@@ -28,12 +28,13 @@
 		</tr>
 
 		<?php
+			
 		foreach($transactionCompare->TImportedLines as $i => $line) { ?>
-		<tr <?php echo $bc[$var] ?>>
+		<tr <?php echo $bc[$i % 2] ?>>
 			<?php if(!empty($line->bankline)) { ?>
 
 				<td class="num_line" rowspan="<?php echo count($line->bankline) ?>"><?php echo $i + 1 ?></td>
-				<td rowspan="<?php echo count($line->bankline) ?>"><?php echo $line->date ?></td>
+				<td rowspan="<?php echo count($line->bankline) ?>"><?php echo dol_print_date($line->date, 'day') ?></td>
 				<td rowspan="<?php echo count($line->bankline) ?>"><?php echo $line->label ?></td>
 				<td rowspan="<?php echo count($line->bankline) ?>" align="right"><?php echo price($line->amount) ?></td>
 
@@ -216,7 +217,6 @@
 				<td align="center"><input type="checkbox" rel="doImport" <?php empty($conf->global->BANKSTATEMENT_UNCHECK_ALL_LINES) ? print 'checked="checked"' : ''; ?> name="TLine[new][]" value="<?php echo $i ?>" /></td>
 			<?php } ?>
 
-			<?php $var = !$var ?>
 		</tr>
 		<?php } ?>
 	</table>
