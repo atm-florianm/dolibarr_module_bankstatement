@@ -95,17 +95,17 @@ class BankStatement extends CommonObject
 	public $fields=array(
 		'rowid'             => array('type'=>'integer',      'label'=>'TechnicalID',      'enabled'=>1, 'position'=>1,    'notnull'=>1,  'visible'=>  0, 'noteditable'=>1, 'index'=>1, 'comment'=>"Id"),
 		'ref'               => array('type'=>'varchar(128)', 'label'=>'Ref',              'enabled'=>1, 'position'=>10,   'notnull'=>1,  'visible'=>  4, 'noteditable'=>1, 'default'=>'(PROV)', 'index'=>1, 'searchall'=>1, 'showoncombobox'=>'1', 'comment'=>"Reference"),
-		'label'             => array('type'=>'varchar(128)', 'label'=>'Label',            'enabled'=>1, 'position'=>11,   'notnull'=>0,  'visible'=>  1, 'searchall'=>1,),
-		'status'            => array('type'=>'integer',      'label'=>'Status',           'enabled'=>1, 'position'=>12,   'notnull'=>1,  'visible'=>  4, 'noteditable'=>1, 'arrayofkeyval'=>array(self::STATUS_UNRECONCILED=>'Unreconciled', self::STATUS_RECONCILED=>'Reconciled'),),
-		'fk_account'        => array('type'=>'integer',      'label'=>'Account',          'enabled'=>1, 'position'=>13,   'notnull'=>1,  'visible'=>  1, 'foreignkey'=>'bank_account.rowid',),
-		'date_start'        => array('type'=>'date',         'label'=>'DateStart',        'enabled'=>1, 'position'=>20,   'notnull'=>0,  'visible'=> -4, 'noteditable'=>1,),
-		'date_end'          => array('type'=>'date',         'label'=>'DateEnd',          'enabled'=>1, 'position'=>21,   'notnull'=>0,  'visible'=> -4, 'noteditable'=>1,),
-		'tms'               => array('type'=>'timestamp',    'label'=>'DateModification', 'enabled'=>1, 'position'=>501,  'notnull'=>0,  'visible'=>  0, 'noteditable'=>1,),
-		'fk_user_import'    => array('type'=>'integer',      'label'=>'UserImport',       'enabled'=>1, 'position'=>502,  'notnull'=>0,  'visible'=>  0, 'noteditable'=>1, 'foreignkey'=>'user.rowid',),
+		'label'             => array('type'=>'varchar(128)', 'label'=>'Label',            'enabled'=>1, 'position'=>11,   'notnull'=>0,  'visible'=>  1, 'searchall'=>1),
+		'status'            => array('type'=>'integer',      'label'=>'Status',           'enabled'=>1, 'position'=>12,   'notnull'=>1,  'visible'=>  4, 'noteditable'=>1, 'arrayofkeyval'=>array(self::STATUS_UNRECONCILED=>'Unreconciled', self::STATUS_RECONCILED=>'Reconciled')),
+		'fk_account'        => array('type'=>'integer',      'label'=>'Account',          'enabled'=>1, 'position'=>13,   'notnull'=>1,  'visible'=>  1, 'foreignkey'=>'bank_account.rowid'),
+		'date_start'        => array('type'=>'date',         'label'=>'DateStart',        'enabled'=>1, 'position'=>20,   'notnull'=>0,  'visible'=> -4, 'noteditable'=>1),
+		'date_end'          => array('type'=>'date',         'label'=>'DateEnd',          'enabled'=>1, 'position'=>21,   'notnull'=>0,  'visible'=> -4, 'noteditable'=>1),
+		'tms'               => array('type'=>'timestamp',    'label'=>'DateModification', 'enabled'=>1, 'position'=>501,  'notnull'=>0,  'visible'=>  0, 'noteditable'=>1),
+		'fk_user_import'    => array('type'=>'integer',      'label'=>'UserImport',       'enabled'=>1, 'position'=>502,  'notnull'=>0,  'visible'=>  0, 'noteditable'=>1, 'foreignkey'=>'user.rowid'),
 		'date_import'       => array('type'=>'date',         'label'=>'DateImport',       'enabled'=>1, 'position'=>503,  'notnull'=>0,  'visible'=>  0, 'noteditable'=>1),
 //		'date_reconcile'    => array('type'=>'date',         'label'=>'DateReconcile',    'enabled'=>1, 'position'=>505,  'notnull'=>0,  'visible'=>  4, 'noteditable'=>1,),
-		'import_key'        => array('type'=>'varchar(14)',  'label'=>'ImportId',         'enabled'=>1, 'position'=>1000, 'notnull'=>-1, 'visible'=>  0, 'noteditable'=>1,),
-		'entity'            => array('type'=>'integer',      'label'=>'Entity',           'enabled'=>1, 'position'=>1000, 'notnull'=>0,  'visible'=>  0, 'noteditable'=>1, 'foreignkey'=>'entity.rowid',),
+		'import_key'        => array('type'=>'varchar(14)',  'label'=>'ImportId',         'enabled'=>1, 'position'=>1000, 'notnull'=>-1, 'visible'=>  0, 'noteditable'=>1),
+		'entity'            => array('type'=>'integer',      'label'=>'Entity',           'enabled'=>1, 'position'=>1000, 'notnull'=>0,  'visible'=>  0, 'noteditable'=>1, 'foreignkey'=>'entity.rowid', 'default'=>1)
 	);
 	public $rowid;
 	public $ref;
@@ -179,7 +179,7 @@ class BankStatement extends CommonObject
 		$this->CSVFormat->load(0);
 
 		if (empty($conf->global->MAIN_SHOW_TECHNICAL_ID) && isset($this->fields['rowid'])) $this->fields['rowid']['visible'] = 0;
-		if (empty($conf->multicompany->enabled) && isset($this->fields['entity'])) $this->fields['entity']['enabled'] = 0;
+//		if (empty($conf->multicompany->enabled) && isset($this->fields['entity'])) $this->fields['entity']['enabled'] = 0;
 
 		// Example to show how to set values of fields definition dynamically
 		/*if ($user->rights->bankstatement->bankstatement->read) {
